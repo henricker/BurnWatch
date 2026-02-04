@@ -1,36 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🕵️‍♂️ BurnWatch
+### *Stop burning cash. Start watching your burn.*
 
-## Getting Started
+**BurnWatch** is a strategic financial observability platform designed for lean startups and engineering teams. We transform the chaotic "Black Box" of cloud billing into actionable, real-time financial intelligence.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 💎 The Value Proposition
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Cloud costs are the second largest expense for software companies, yet most teams only see the price tag when it's too late. 
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+**BurnWatch** provides the "Financial Early Warning System" that founders and CTOs need to protect their runway. We don't just show you what you spent; we tell you **what you are about to spend.**
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🎯 Key Business Outcomes
 
-## Learn More
+* **Protect Your Runway:** Stop "unforeseen spikes" from eating months of your company's life.
+* **Engineering Accountability:** Instantly identify which deployment or service caused a cost anomaly.
+* **Credit Optimization:** For startups on AWS/GCP credit programs, BurnWatch ensures you don't waste your "free money" on idle resources.
+* **Zero-Effort FinOps:** Enterprise-grade financial oversight without the $50k/year consultant price tag.
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🚀 Strategic Features
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 1. The Unified Burn Rate
+Consolidate **AWS, Vercel, and GCP** into a single, normalized financial timeline. No more hopping between tabs to understand your total daily spend.
 
-## Deploy on Vercel
+### 2. Predictive Forecasting (The "Aha!" Moment)
+Using daily regression models, BurnWatch projects your end-of-month invoice. If your projected bill exceeds your budget, you get notified on Day 5, not Day 30.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 3. Anomaly Detection (The Kill-Switch)
+Detect cost spikes at the service level (e.g., an S3 bucket receiving a DDoS or a Lambda loop). BurnWatch alerts your team via Slack before the "leak" becomes a flood.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### 4. Shadow IT Discovery
+Identify "Zombies"—forgotten instances, idle GPUs, and orphaned storage volumes that are quietly draining your bank account.
+
+---
+
+## 🛠 High-Level Architecture
+*Built for security and scale by senior engineers.*
+
+* **Security First:** AES-256-GCM encryption for all cloud credentials. We never store what we don't need.
+* **Adapter-Based Engine:** A modular architecture that allows adding new cloud providers in hours, not weeks.
+* **Lightweight & Edge-Ready:** Built on **Next.js 14**, optimized for low-latency dashboards and global reach.
+* **Predictive Layer:** Custom math engine for trend analysis and anomaly scoring.
+
+---
+
+## 📈 Roadmap & Vision
+
+- **Q1:** MVP - Vercel & AWS connectivity + Core Projection Engine.
+- **Q2:** Intelligent Alerts - Slack/Discord integration with 1-click remediation.
+- **Q3:** AI-Spend Monitoring - Tracking LLM token usage (OpenAI/Anthropic) as part of infra costs.
+- **Q4:** Auto-Optimization - AI-driven suggestions for Spot Instances and Reserved Capacity.
+
+---
+
+## 💼 Business Inquiries
+BurnWatch is currently in active development. If you are a founder looking to regain control of your cloud spend, follow this repository or open an issue to join the beta.
