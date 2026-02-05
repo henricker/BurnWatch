@@ -376,6 +376,8 @@ Comparado à descrição em `docs/sprints/SPRINT_01.md` (Milestone 2), o que foi
   - next-intl com pt, en, es; mensagens em `messages/*.json`; cookie `NEXT_LOCALE`; `LocaleOverrideProvider` + `GET /api/messages/[locale]` para troca imediata sem refresh; client views (MembersView, SettingsView, dashboard page) com `useTranslations()` para toda a UI traduzida atualizar na hora.
 - **UI (shadcn e tema)**
   - Sidebar shadcn; regra `shadcn-ui.mdc`; páginas com classes de tema para light/dark.
+- **Dashboard (card de anomalia)**
+  - Card de alerta de anomalia em `src/app/dashboard/page.tsx` com contraste adequado no light mode (fundo/borda e texto; dark mode mantido).
 - **Resiliência**
   - Middleware com try/catch e timeout; Supabase server `setAll` em try/catch; `fetchWithRetry` no cliente; `setLocaleCookie` em auth/complete, onboarding/complete e PATCH profile.
 
