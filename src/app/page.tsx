@@ -13,6 +13,14 @@ export default function AuthPage() {
   const [status, setStatus] = useState<AuthStatus>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  function getRedirectUrl(): string | undefined {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+
+    return `${window.location.origin}/auth/callback`;
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -26,15 +34,10 @@ export default function AuthPage() {
     setErrorMessage(null);
 
     try {
-      const redirectTo =
-        typeof window !== "undefined"
-          ? `${window.location.origin}/auth/callback`
-          : undefined;
-
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: redirectTo,
+          emailRedirectTo: getRedirectUrl(),
         },
       });
 
@@ -45,6 +48,30 @@ export default function AuthPage() {
       }
 
       setStatus("success");
+    } catch (error: unknown) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Unexpected error.",
+      );
+      setStatus("error");
+    }
+  }
+
+  async function handleGithubSignIn() {
+    setStatus("loading");
+    setErrorMessage(null);
+
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "github",
+        options: {
+          redirectTo: getRedirectUrl(),
+        },
+      });
+
+      if (error) {
+        setErrorMessage(error.message);
+        setStatus("error");
+      }
     } catch (error: unknown) {
       setErrorMessage(
         error instanceof Error ? error.message : "Unexpected error.",
@@ -94,6 +121,19 @@ export default function AuthPage() {
             {status === "loading" ? "Sending magic link..." : "Send magic link"}
           </button>
         </form>
+
+        <div className="mt-4">
+          <button
+            type="button"
+            disabled={status === "loading"}
+            onClick={() => {
+              void handleGithubSignIn();
+            }}
+            className="flex w-full items-center justify-center rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm font-medium text-zinc-50 transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            Continue with GitHub
+          </button>
+        </div>
 
         <div className="mt-4 min-h-[1.5rem] text-sm">
           {status === "success" && (
