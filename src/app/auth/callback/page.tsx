@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 import { fetchWithRetry } from "@/lib/safe-fetch";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -11,12 +12,11 @@ type CallbackStatus = "verifying" | "success" | "error";
 const supabase = createSupabaseBrowserClient();
 
 function AuthCallbackContent() {
+  const t = useTranslations("Callback");
   const router = useRouter();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<CallbackStatus>("verifying");
-  const [message, setMessage] = useState<string>(
-    "Confirming your session. This may take a moment...",
-  );
+  const [message, setMessage] = useState<string>(t("confirmingSession"));
 
   useEffect(() => {
     async function confirmSession() {
@@ -28,10 +28,7 @@ function AuthCallbackContent() {
         const { data, error } = await supabase.auth.getSession();
         if (error || !data.session) {
           setStatus("error");
-          setMessage(
-            error?.message ??
-              "No active session found. Try requesting a new magic link.",
-          );
+          setMessage(error?.message ?? t("noSession"));
           return;
         }
 
@@ -45,17 +42,14 @@ function AuthCallbackContent() {
         if (!response.ok) {
           const data = (await response.json()) as { error?: string };
           setStatus("error");
-          setMessage(
-            data.error ??
-              "Failed to finalize authentication. Please try again later.",
-          );
+          setMessage(data.error ?? t("authFailed"));
           return;
         }
 
         const dataJson = (await response.json()) as { next: string };
 
         setStatus("success");
-        setMessage("You are signed in. Redirecting...");
+        setMessage(t("signedInRedirecting"));
 
         setTimeout(() => {
           router.replace(dataJson.next);
@@ -66,10 +60,10 @@ function AuthCallbackContent() {
           error instanceof TypeError && (error as Error).message?.includes("fetch");
         setMessage(
           isNetwork
-            ? "Network error. Please try again."
+            ? t("networkError")
             : error instanceof Error
               ? error.message
-              : "Failed to confirm session.",
+              : t("confirmSessionFailed"),
         );
       }
     }
@@ -82,7 +76,7 @@ function AuthCallbackContent() {
       <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900/80 p-8 shadow-xl">
         <div className="space-y-3">
           <h1 className="text-2xl font-semibold tracking-tight">
-            Finishing sign-in
+            {t("title")}
           </h1>
           <p className="text-sm text-zinc-400">{message}</p>
         </div>
@@ -97,7 +91,7 @@ function AuthCallbackContent() {
             onClick={() => router.replace("/")}
             className="mt-6 flex w-full items-center justify-center rounded-md bg-zinc-100 px-3 py-2 text-sm font-medium text-zinc-900 transition hover:bg-white"
           >
-            Back to sign in
+            {t("backToSignIn")}
           </button>
         )}
       </div>

@@ -1,0 +1,136 @@
+{
+  "Auth": {
+    "title": "Sign in to BurnWatch",
+    "subtitle": "Enter your email and we'll send you a magic link. No passwords, just secure access to your workspace.",
+    "workEmail": "Work email",
+    "emailPlaceholder": "you@company.com",
+    "sendingMagicLink": "Sending magic link...",
+    "sendMagicLink": "Send magic link",
+    "continueWithGithub": "Continue with GitHub",
+    "magicLinkSent": "Magic link sent. Check your inbox to continue.",
+    "disclaimer": "By signing in, you agree to keep your cloud credentials safe. BurnWatch will only use read-only access to monitor spend on your behalf.",
+    "emailRequired": "Email is required.",
+    "unexpectedError": "Unexpected error."
+  },
+  "Callback": {
+    "title": "Finishing sign-in",
+    "confirmingSession": "Confirming your session. This may take a moment...",
+    "noSession": "No active session found. Try requesting a new magic link.",
+    "authFailed": "Failed to finalize authentication. Please try again later.",
+    "signedInRedirecting": "You are signed in. Redirecting...",
+    "backToSignIn": "Back to sign in",
+    "networkError": "Network error. Please try again.",
+    "confirmSessionFailed": "Failed to confirm session."
+  },
+  "Onboarding": {
+    "title": "Create your workspace",
+    "subtitle": "Before you start tracking spend, we need to create your Organization (workspace). This step is required.",
+    "orgName": "Organization name",
+    "orgNamePlaceholder": "ex: Acme Infra, My Startup",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "firstNamePlaceholder": "Jane",
+    "lastNamePlaceholder": "Doe",
+    "avatarOptional": "Avatar (optional)",
+    "avatarHint": "Used in headers/sidebars. You can change this later.",
+    "creatingWorkspace": "Creating workspace...",
+    "createWorkspace": "Create workspace",
+    "workspaceCreated": "Workspace created. Redirecting to your dashboard...",
+    "footer": "BurnWatch will use this Organization as the primary container for your cloud accounts, spend data and alerts.",
+    "orgNameRequired": "Organization name is required.",
+    "nameRequired": "First name and last name are required.",
+    "createFailed": "Failed to create organization. Please try again.",
+    "unableToLoadUser": "Unable to load authenticated user for avatar."
+  },
+  "Dashboard": {
+    "title": "BurnWatch Dashboard (placeholder)",
+    "signedInMessage": "You're signed in. This dashboard will show spend, projections and anomalies in the next milestones."
+  },
+  "Members": {
+    "title": "Member Management",
+    "subtitle": "Manage your connections",
+    "currentMembers": "Current Members",
+    "pendingInvites": "Pending Invites",
+    "member": "Member",
+    "status": "Status",
+    "actions": "Actions",
+    "you": "(you)",
+    "active": "Active",
+    "pending": "Pending",
+    "role": "Role",
+    "noPendingInvites": "No pending invites."
+  },
+  "Invite": {
+    "button": "+ Invite Member",
+    "title": "Invite Member",
+    "email": "Email",
+    "emailPlaceholder": "colleague@example.com",
+    "role": "Role",
+    "cancel": "Cancel",
+    "sending": "Sending…",
+    "sendInvite": "Send invite",
+    "failedToSend": "Failed to send invite."
+  },
+  "RemoveMember": {
+    "remove": "Remove",
+    "confirm": "Remove {name}?",
+    "thisMember": "this member",
+    "yes": "Yes",
+    "no": "No",
+    "failed": "Failed to remove member."
+  },
+  "ResendInvite": {
+    "resend": "Resend",
+    "rateLimit": "Too many emails sent. Please wait a few minutes before resending.",
+    "failed": "Failed to resend invite."
+  },
+  "Settings": {
+    "title": "Settings",
+    "profile": "Profile",
+    "profileDescription": "Edit your name, last name and avatar.",
+    "organization": "Organization",
+    "yourRole": "Your role: {role}",
+    "dangerZone": "Danger zone",
+    "dangerZoneDescription": "Deleting the organization will remove all members, cloud accounts, and billing data. This cannot be undone.",
+    "dangerZoneFuture": "(Delete organization will be implemented in a future milestone.)"
+  },
+  "ProfileEdit": {
+    "avatar": "Avatar",
+    "change": "Change",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "firstNamePlaceholder": "Your first name",
+    "lastNamePlaceholder": "Your last name",
+    "saveChanges": "Save changes",
+    "saving": "Saving…",
+    "updated": "Profile updated.",
+    "saveFailed": "Failed to save.",
+    "networkError": "Network error. Please try again."
+  },
+  "Sidebar": {
+    "navigation": "Navigation",
+    "dashboard": "Dashboard",
+    "members": "Members",
+    "settings": "Settings"
+  },
+  "Theme": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "Locale": {
+    "label": "Language",
+    "pt": "PT",
+    "en": "EN",
+    "es": "ES"
+  },
+  "Roles": {
+    "OWNER": "Owner",
+    "ADMIN": "Admin",
+    "MEMBER": "Member"
+  },
+  "Common": {
+    "networkError": "Network error. Please try again."
+  }
+}

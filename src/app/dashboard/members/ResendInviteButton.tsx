@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 import type { Role } from "@prisma/client";
 import { fetchWithRetry } from "@/lib/safe-fetch";
@@ -12,21 +13,23 @@ interface ResendInviteButtonProps {
   targetRole: Role;
 }
 
-function friendlyResendError(apiError: string): string {
-  if (/rate limit|rate_limit|too many requests|429/i.test(apiError)) {
-    return "Muitos e-mails enviados. Aguarde alguns minutos antes de reenviar.";
-  }
-  return apiError || "Falha ao reenviar convite.";
-}
-
 export function ResendInviteButton({
   organizationId,
   email,
   targetRole,
 }: ResendInviteButtonProps) {
+  const t = useTranslations("ResendInvite");
+  const tCommon = useTranslations("Common");
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function friendlyResendError(apiError: string): string {
+    if (/rate limit|rate_limit|too many requests|429/i.test(apiError)) {
+      return t("rateLimit");
+    }
+    return apiError || t("failed");
+  }
 
   async function handleResend() {
     setError(null);
@@ -44,7 +47,7 @@ export function ResendInviteButton({
       }
       router.refresh();
     } catch {
-      setError("Erro de rede. Tente novamente.");
+      setError(tCommon("networkError"));
     } finally {
       setLoading(false);
     }
@@ -58,7 +61,7 @@ export function ResendInviteButton({
         disabled={loading}
         className="rounded px-2 py-1 text-sm text-primary hover:bg-primary/10 disabled:opacity-50"
       >
-        {loading ? "…" : "Reenviar"}
+        {loading ? "…" : t("resend")}
       </button>
       {error && (
         <p className="max-w-[220px] text-xs text-destructive">{error}</p>

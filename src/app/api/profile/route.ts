@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
+import { setLocaleCookie } from "@/lib/i18n-cookie";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function PATCH(request: Request) {
@@ -56,7 +57,7 @@ export async function PATCH(request: Request) {
   }
 
   const validThemes = ["light", "dark", "system"] as const;
-  const validLocales = ["pt", "en"] as const;
+  const validLocales = ["pt", "en", "es"] as const;
 
   const updateData: {
     firstName?: string | null;
@@ -95,7 +96,7 @@ export async function PATCH(request: Request) {
     data: updateData,
   });
 
-  return NextResponse.json({
+  const response = NextResponse.json({
     id: updated.id,
     firstName: updated.firstName,
     lastName: updated.lastName,
@@ -103,4 +104,8 @@ export async function PATCH(request: Request) {
     theme: updated.theme,
     locale: updated.locale,
   });
+  if (updateData.locale !== undefined) {
+    setLocaleCookie(response, updated.locale);
+  }
+  return response;
 }

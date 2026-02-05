@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 import { getProfileAvatarUrl, getInitials } from "@/lib/avatar";
 import { fetchWithRetry } from "@/lib/safe-fetch";
@@ -26,6 +27,7 @@ export function ProfileEditForm({
   initialAvatarPath,
   initialAvatarUrl,
 }: ProfileEditFormProps) {
+  const t = useTranslations("ProfileEdit");
   const router = useRouter();
   const [firstName, setFirstName] = useState(initialFirstName ?? "");
   const [lastName, setLastName] = useState(initialLastName ?? "");
@@ -91,7 +93,7 @@ export function ProfileEditForm({
 
       const data = (await res.json()) as { error?: string };
       if (!res.ok) {
-        setError(data.error ?? "Falha ao salvar.");
+        setError(data.error ?? t("saveFailed"));
         return;
       }
 
@@ -106,8 +108,8 @@ export function ProfileEditForm({
     } catch (e) {
       setError(
         e instanceof TypeError && e.message.includes("fetch")
-          ? "Erro de rede. Tente novamente."
-          : "Falha ao salvar.",
+          ? t("networkError")
+          : t("saveFailed"),
       );
     } finally {
       setLoading(false);
@@ -118,7 +120,7 @@ export function ProfileEditForm({
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
         <div className="flex flex-col items-start gap-2">
-          <label className="text-sm font-medium text-muted-foreground">Avatar</label>
+          <label className="text-sm font-medium text-muted-foreground">{t("avatar")}</label>
           <div className="relative">
             {displayAvatarUrl ? (
               <img
@@ -138,7 +140,7 @@ export function ProfileEditForm({
                 className="sr-only"
                 onChange={handleAvatarChange}
               />
-              <span className="text-xs">Alterar</span>
+              <span className="text-xs">{t("change")}</span>
             </label>
           </div>
         </div>
@@ -149,7 +151,7 @@ export function ProfileEditForm({
               htmlFor="profile-firstName"
               className="block text-sm font-medium text-muted-foreground"
             >
-              Nome
+              {t("firstName")}
             </label>
             <input
               id="profile-firstName"
@@ -157,7 +159,7 @@ export function ProfileEditForm({
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
               className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
-              placeholder="Seu nome"
+              placeholder={t("firstNamePlaceholder")}
             />
           </div>
           <div>
@@ -165,7 +167,7 @@ export function ProfileEditForm({
               htmlFor="profile-lastName"
               className="block text-sm font-medium text-muted-foreground"
             >
-              Sobrenome
+              {t("lastName")}
             </label>
             <input
               id="profile-lastName"
@@ -173,7 +175,7 @@ export function ProfileEditForm({
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
               className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
-              placeholder="Seu sobrenome"
+              placeholder={t("lastNamePlaceholder")}
             />
           </div>
         </div>
@@ -183,7 +185,7 @@ export function ProfileEditForm({
         <p className="text-sm text-destructive">{error}</p>
       )}
       {success && (
-        <p className="text-sm text-emerald-600 dark:text-emerald-400">Perfil atualizado.</p>
+        <p className="text-sm text-emerald-600 dark:text-emerald-400">{t("updated")}</p>
       )}
 
       <button
@@ -191,7 +193,7 @@ export function ProfileEditForm({
         disabled={loading}
         className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
       >
-        {loading ? "Salvando…" : "Salvar alterações"}
+        {loading ? t("saving") : t("saveChanges")}
       </button>
     </form>
   );

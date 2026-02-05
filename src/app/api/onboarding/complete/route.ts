@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
+import { setLocaleCookie } from "@/lib/i18n-cookie";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { completeOnboarding } from "@/modules/organizations/application/onboardingService";
 
@@ -52,6 +53,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: message }, { status: 400 });
   }
 
-  return NextResponse.json({ ok: true });
+  const profile = await prisma.profile.findFirst({
+    where: { userId: user.id },
+    select: { locale: true },
+  });
+  const response = NextResponse.json({ ok: true });
+  setLocaleCookie(response, profile?.locale ?? undefined);
+  return response;
 }
 

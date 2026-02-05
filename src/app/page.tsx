@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { useTranslations } from "next-intl";
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -9,6 +10,7 @@ type AuthStatus = "idle" | "loading" | "success" | "error";
 const supabase = createSupabaseBrowserClient();
 
 export default function AuthPage() {
+  const t = useTranslations("Auth");
   const [email, setEmail] = useState<string>("");
   const [status, setStatus] = useState<AuthStatus>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -25,7 +27,7 @@ export default function AuthPage() {
     event.preventDefault();
 
     if (!email) {
-      setErrorMessage("Email is required.");
+      setErrorMessage(t("emailRequired"));
       setStatus("error");
       return;
     }
@@ -50,7 +52,7 @@ export default function AuthPage() {
       setStatus("success");
     } catch (error: unknown) {
       setErrorMessage(
-        error instanceof Error ? error.message : "Unexpected error.",
+        error instanceof Error ? error.message : t("unexpectedError"),
       );
       setStatus("error");
     }
@@ -74,7 +76,7 @@ export default function AuthPage() {
       }
     } catch (error: unknown) {
       setErrorMessage(
-        error instanceof Error ? error.message : "Unexpected error.",
+        error instanceof Error ? error.message : t("unexpectedError"),
       );
       setStatus("error");
     }
@@ -85,11 +87,10 @@ export default function AuthPage() {
       <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900/80 p-8 shadow-xl">
         <div className="mb-8 space-y-2">
           <h1 className="text-2xl font-semibold tracking-tight">
-            Sign in to BurnWatch
+            {t("title")}
           </h1>
           <p className="text-sm text-zinc-400">
-            Enter your email and we&apos;ll send you a magic link. No passwords,
-            just secure access to your workspace.
+            {t("subtitle")}
           </p>
         </div>
 
@@ -99,14 +100,14 @@ export default function AuthPage() {
               htmlFor="email"
               className="block text-sm font-medium text-zinc-200"
             >
-              Work email
+              {t("workEmail")}
             </label>
             <input
               id="email"
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              placeholder="you@company.com"
+              placeholder={t("emailPlaceholder")}
               className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-50 outline-none ring-0 transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-500/40"
               autoComplete="email"
               required
@@ -118,7 +119,7 @@ export default function AuthPage() {
             disabled={status === "loading"}
             className="flex w-full items-center justify-center rounded-md bg-zinc-100 px-3 py-2 text-sm font-medium text-zinc-900 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-70"
           >
-            {status === "loading" ? "Sending magic link..." : "Send magic link"}
+            {status === "loading" ? t("sendingMagicLink") : t("sendMagicLink")}
           </button>
         </form>
 
@@ -131,14 +132,14 @@ export default function AuthPage() {
             }}
             className="flex w-full items-center justify-center rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm font-medium text-zinc-50 transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-70"
           >
-            Continue with GitHub
+            {t("continueWithGithub")}
           </button>
         </div>
 
         <div className="mt-4 min-h-[1.5rem] text-sm">
           {status === "success" && (
             <p className="text-emerald-400">
-              Magic link sent. Check your inbox to continue.
+              {t("magicLinkSent")}
             </p>
           )}
           {status === "error" && errorMessage && (
@@ -147,8 +148,7 @@ export default function AuthPage() {
         </div>
 
         <p className="mt-6 text-xs text-zinc-500">
-          By signing in, you agree to keep your cloud credentials safe. BurnWatch
-          will only use read-only access to monitor spend on your behalf.
+          {t("disclaimer")}
         </p>
       </div>
     </div>

@@ -1,0 +1,136 @@
+{
+  "Auth": {
+    "title": "Iniciar sesión en BurnWatch",
+    "subtitle": "Introduce tu correo y te enviaremos un enlace mágico. Sin contraseñas, solo acceso seguro a tu espacio de trabajo.",
+    "workEmail": "Correo laboral",
+    "emailPlaceholder": "tu@empresa.com",
+    "sendingMagicLink": "Enviando enlace mágico...",
+    "sendMagicLink": "Enviar enlace mágico",
+    "continueWithGithub": "Continuar con GitHub",
+    "magicLinkSent": "Enlace mágico enviado. Revisa tu bandeja de entrada para continuar.",
+    "disclaimer": "Al iniciar sesión, aceptas mantener tus credenciales de nube seguras. BurnWatch solo usará acceso de solo lectura para monitorear el gasto por ti.",
+    "emailRequired": "El correo es obligatorio.",
+    "unexpectedError": "Error inesperado."
+  },
+  "Callback": {
+    "title": "Finalizando inicio de sesión",
+    "confirmingSession": "Confirmando tu sesión. Puede tardar un momento...",
+    "noSession": "No hay sesión activa. Solicita un nuevo enlace mágico.",
+    "authFailed": "Error al finalizar la autenticación. Inténtalo de nuevo más tarde.",
+    "signedInRedirecting": "Has iniciado sesión. Redirigiendo...",
+    "backToSignIn": "Volver al inicio de sesión",
+    "networkError": "Error de red. Inténtalo de nuevo.",
+    "confirmSessionFailed": "Error al confirmar la sesión."
+  },
+  "Onboarding": {
+    "title": "Crea tu espacio de trabajo",
+    "subtitle": "Antes de empezar a rastrear gastos, necesitamos crear tu Organización (espacio de trabajo). Este paso es obligatorio.",
+    "orgName": "Nombre de la organización",
+    "orgNamePlaceholder": "ej: Acme Infra, Mi Startup",
+    "firstName": "Nombre",
+    "lastName": "Apellido",
+    "firstNamePlaceholder": "María",
+    "lastNamePlaceholder": "García",
+    "avatarOptional": "Avatar (opcional)",
+    "avatarHint": "Se usa en cabeceras y barra lateral. Puedes cambiarlo después.",
+    "creatingWorkspace": "Creando espacio de trabajo...",
+    "createWorkspace": "Crear espacio de trabajo",
+    "workspaceCreated": "Espacio de trabajo creado. Redirigiendo a tu panel...",
+    "footer": "BurnWatch usará esta Organización como contenedor principal de tus cuentas de nube, datos de gasto y alertas.",
+    "orgNameRequired": "El nombre de la organización es obligatorio.",
+    "nameRequired": "Nombre y apellido son obligatorios.",
+    "createFailed": "Error al crear la organización. Inténtalo de nuevo.",
+    "unableToLoadUser": "No se pudo cargar el usuario autenticado para el avatar."
+  },
+  "Dashboard": {
+    "title": "BurnWatch Dashboard (placeholder)",
+    "signedInMessage": "Has iniciado sesión. Este panel mostrará gastos, proyecciones y anomalías en los próximos hitos."
+  },
+  "Members": {
+    "title": "Gestión de miembros",
+    "subtitle": "Gestiona tus conexiones",
+    "currentMembers": "Miembros actuales",
+    "pendingInvites": "Invitaciones pendientes",
+    "member": "Miembro",
+    "status": "Estado",
+    "actions": "Acciones",
+    "you": "(tú)",
+    "active": "Activo",
+    "pending": "Pendiente",
+    "role": "Rol",
+    "noPendingInvites": "Ninguna invitación pendiente."
+  },
+  "Invite": {
+    "button": "+ Invitar miembro",
+    "title": "Invitar miembro",
+    "email": "Correo",
+    "emailPlaceholder": "colega@ejemplo.com",
+    "role": "Rol",
+    "cancel": "Cancelar",
+    "sending": "Enviando…",
+    "sendInvite": "Enviar invitación",
+    "failedToSend": "Error al enviar la invitación."
+  },
+  "RemoveMember": {
+    "remove": "Eliminar",
+    "confirm": "¿Eliminar a {name}?",
+    "thisMember": "este miembro",
+    "yes": "Sí",
+    "no": "No",
+    "failed": "Error al eliminar miembro."
+  },
+  "ResendInvite": {
+    "resend": "Reenviar",
+    "rateLimit": "Demasiados correos enviados. Espera unos minutos antes de reenviar.",
+    "failed": "Error al reenviar la invitación."
+  },
+  "Settings": {
+    "title": "Configuración",
+    "profile": "Perfil",
+    "profileDescription": "Edita tu nombre, apellido y avatar.",
+    "organization": "Organización",
+    "yourRole": "Tu rol: {role}",
+    "dangerZone": "Zona de peligro",
+    "dangerZoneDescription": "Eliminar la organización eliminará todos los miembros, cuentas de nube y datos de facturación. No se puede deshacer.",
+    "dangerZoneFuture": "(Eliminar organización se implementará en un hito futuro.)"
+  },
+  "ProfileEdit": {
+    "avatar": "Avatar",
+    "change": "Cambiar",
+    "firstName": "Nombre",
+    "lastName": "Apellido",
+    "firstNamePlaceholder": "Tu nombre",
+    "lastNamePlaceholder": "Tu apellido",
+    "saveChanges": "Guardar cambios",
+    "saving": "Guardando…",
+    "updated": "Perfil actualizado.",
+    "saveFailed": "Error al guardar.",
+    "networkError": "Error de red. Inténtalo de nuevo."
+  },
+  "Sidebar": {
+    "navigation": "Navegación",
+    "dashboard": "Panel",
+    "members": "Miembros",
+    "settings": "Configuración"
+  },
+  "Theme": {
+    "label": "Tema",
+    "light": "Claro",
+    "dark": "Oscuro",
+    "system": "Sistema"
+  },
+  "Locale": {
+    "label": "Idioma",
+    "pt": "PT",
+    "en": "EN",
+    "es": "ES"
+  },
+  "Roles": {
+    "OWNER": "Propietario",
+    "ADMIN": "Admin",
+    "MEMBER": "Miembro"
+  },
+  "Common": {
+    "networkError": "Error de red. Inténtalo de nuevo."
+  }
+}

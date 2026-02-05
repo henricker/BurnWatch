@@ -2,10 +2,10 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 import type { Role } from "@prisma/client";
 import { fetchWithRetry } from "@/lib/safe-fetch";
-import { ROLE_LABELS } from "@/lib/roles";
 
 interface InviteMemberButtonProps {
   organizationId: string;
@@ -18,6 +18,9 @@ export function InviteMemberButton({
   currentUserRole,
   allowInviteAdmin,
 }: InviteMemberButtonProps) {
+  const t = useTranslations("Invite");
+  const tRoles = useTranslations("Roles");
+  const tCommon = useTranslations("Common");
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
@@ -39,7 +42,7 @@ export function InviteMemberButton({
       });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) {
-        setError(data.error ?? "Failed to send invite.");
+        setError(data.error ?? t("failedToSend"));
         return;
       }
       setOpen(false);
@@ -47,7 +50,7 @@ export function InviteMemberButton({
       setTargetRole("MEMBER");
       router.refresh();
     } catch {
-      setError("Network error. Please try again.");
+      setError(tCommon("networkError"));
     } finally {
       setLoading(false);
     }
@@ -60,7 +63,7 @@ export function InviteMemberButton({
         onClick={() => setOpen(true)}
         className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
       >
-        + Convidar Membro
+        {t("button")}
       </button>
       {open && (
         <div
@@ -71,7 +74,7 @@ export function InviteMemberButton({
         >
           <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-xl">
             <h2 id="invite-title" className="text-lg font-semibold text-foreground">
-              Convidar Membro
+              {t("title")}
             </h2>
             <form onSubmit={handleSubmit} className="mt-4 space-y-4">
               <div>
@@ -79,7 +82,7 @@ export function InviteMemberButton({
                   htmlFor="invite-email"
                   className="block text-xs font-medium text-muted-foreground"
                 >
-                  Email
+                  {t("email")}
                 </label>
                 <input
                   id="invite-email"
@@ -88,7 +91,7 @@ export function InviteMemberButton({
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
-                  placeholder="colleague@example.com"
+                  placeholder={t("emailPlaceholder")}
                 />
               </div>
               <div>
@@ -96,7 +99,7 @@ export function InviteMemberButton({
                   htmlFor="invite-role"
                   className="block text-xs font-medium text-muted-foreground"
                 >
-                  Role
+                  {t("role")}
                 </label>
                 <select
                   id="invite-role"
@@ -104,9 +107,9 @@ export function InviteMemberButton({
                   onChange={(e) => setTargetRole(e.target.value as Role)}
                   className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
                 >
-                  <option value="MEMBER">{ROLE_LABELS.MEMBER}</option>
+                  <option value="MEMBER">{tRoles("MEMBER")}</option>
                   {allowInviteAdmin && (
-                    <option value="ADMIN">{ROLE_LABELS.ADMIN}</option>
+                    <option value="ADMIN">{tRoles("ADMIN")}</option>
                   )}
                 </select>
               </div>
@@ -122,14 +125,14 @@ export function InviteMemberButton({
                   }}
                   className="rounded-lg border border-border px-4 py-2 text-sm text-foreground hover:bg-muted"
                 >
-                  Cancelar
+                  {t("cancel")}
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
                   className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                 >
-                  {loading ? "Enviando…" : "Enviar convite"}
+                  {loading ? t("sending") : t("sendInvite")}
                 </button>
               </div>
             </form>

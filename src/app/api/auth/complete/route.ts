@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
+import { setLocaleCookie } from "@/lib/i18n-cookie";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { completeAuthForUser } from "@/modules/organizations/application/authCompletionService";
 
@@ -43,6 +44,14 @@ export async function GET(request: Request) {
     email,
   });
 
-  return NextResponse.json(result);
+  const response = NextResponse.json(result);
+  if (result.next === "/dashboard") {
+    const profile = await prisma.profile.findFirst({
+      where: { userId: user.id },
+      select: { locale: true },
+    });
+    setLocaleCookie(response, profile?.locale ?? undefined);
+  }
+  return response;
 }
 

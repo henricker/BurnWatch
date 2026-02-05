@@ -85,16 +85,17 @@ Build the end-to-end "Steel Thread": Setup Supabase Auth/DB, connect a cloud pro
 - **Schema (Prisma):**
   - `OrganizationInvite` com `id`, `email`, `organizationId`, `role`, `createdAt`, `expiresAt`; unique `(organizationId, email)`.
   - `Profile.role` como enum `Role` (`OWNER` | `ADMIN` | `MEMBER`); defaults `MEMBER`.
-  - `Profile.theme` e `Profile.locale` para preferências (tema light/dark/system e idioma pt/en).
-- **RBAC:** `src/lib/roles.ts` com `ROLE_LABELS`, `canManageMembers`, `canDeleteOrganization`; hierarquia respeitada no invite (não convidar com role superior ao do inviter).
+  - `Profile.theme` e `Profile.locale` para preferências (tema light/dark/system e idioma **pt | en | es**).
+- **RBAC:** `src/lib/roles.ts` com `canManageMembers`, `canDeleteOrganization`; hierarquia respeitada no invite (não convidar com role superior ao do inviter). Labels de role vêm das traduções i18n.
 - **Invite Service:** `src/modules/organizations/application/inviteService.ts` – `createInvite(prisma, supabase, params)` com validação de role e `signInWithOtp` com `emailRedirectTo` para `/auth/callback`.
-- **Auth completion:** `src/app/api/auth/complete/route.ts` – lê invite pendente por email; se existir, cria `Profile` e remove invite (fluxo atômico); senão redireciona para `/onboarding` se sem profile, ou para `next` (ex.: `/dashboard`).
-- **Onboarding:** `src/app/onboarding/page.tsx` – cria `Organization` e `Profile` (OWNER); upload de avatar opcional; `POST /api/onboarding/complete`.
-- **Member Management UI:** `src/app/dashboard/members/page.tsx` – lista “Membros Atuais” e “Convites Pendentes”; botões Convidar, Remover, Reenviar. APIs: `POST /api/invites`, `DELETE /api/members/[profileId]`, `PATCH /api/profile` (inclui theme/locale).
-- **Settings:** `src/app/dashboard/settings/page.tsx` – seção Perfil (nome, sobrenome, avatar), Organization (nome, role), Danger zone (OWNER). Formulário de perfil e avatar com signed URL (bucket profile).
-- **Tema e idioma:** Light/Dark/System e seletor PT/EN no header do dashboard (canto superior direito); preferências salvas no perfil; ao carregar dashboard aplica `profile.theme` via `PreferencesSync`. Biblioteca: `next-themes` (sem i18n ainda).
-- **UI (shadcn):** Sidebar do dashboard com shadcn (`Sidebar`, `SidebarTrigger`); regra `.cursor/rules/shadcn-ui.mdc` para sempre usar shadcn. Páginas de membros e settings com classes de tema (`text-foreground`, `text-muted-foreground`, `bg-card`, `border-border`, etc.) para light/dark.
-- **Outros:** Middleware em `src/middleware.ts` redireciona usuário logado de `/` para `/dashboard`; try/catch + timeout no middleware para não travar se Supabase falhar. `src/lib/supabase/server.ts` – `setAll` em try/catch para não quebrar em Server Components (cookies só podem ser modificados em Route Handler/Server Action). `src/lib/safe-fetch.ts` – `fetchWithRetry` para reduzir falhas de rede em dev. RLS: políticas documentadas em `docs/RLS_POLICIES.sql` (incl. `organization_invites_owner_admin_manage`).
+- **Auth completion:** `src/app/api/auth/complete/route.ts` – lê invite pendente por email; se existir, cria `Profile` e remove invite (fluxo atômico); senão redireciona para `/onboarding` se sem profile, ou para `next` (ex.: `/dashboard`). Define cookie `NEXT_LOCALE` na resposta quando redireciona para dashboard.
+- **Onboarding:** `src/app/onboarding/page.tsx` – cria `Organization` e `Profile` (OWNER); upload de avatar opcional; `POST /api/onboarding/complete`. Cookie `NEXT_LOCALE` definido na resposta.
+- **Member Management:** `src/app/dashboard/members/page.tsx` (server) busca dados e renderiza `MembersView` (client). Lista “Membros Atuais” e “Convites Pendentes”; Convidar, Remover, Reenviar. APIs: `POST /api/invites`, `DELETE /api/members/[profileId]`, `PATCH /api/profile`.
+- **Settings:** `src/app/dashboard/settings/page.tsx` (server) busca dados e renderiza `SettingsView` (client). Seções Perfil (nome, sobrenome, avatar), Organization (nome, role), Danger zone (OWNER). Avatar com signed URL (bucket `profile`).
+- **Tema e idioma:** next-themes + **next-intl**. Light/Dark/System e seletor **PT/EN/ES** no header do dashboard; troca de idioma **instantânea na UI** (override no client), persistência no perfil em background (igual ao tema). Locale via cookie `NEXT_LOCALE`; `src/i18n/request.ts` (getRequestConfig); `LocaleOverrideProvider` com cache de mensagens e `GET /api/messages/[locale]`; páginas/componentes que exibem texto traduzido usam client components com `useTranslations()` para atualizar na hora sem `router.refresh()`.
+- **i18n:** `messages/pt.json`, `messages/en.json`, `messages/es.json`; todas as strings da UI vêm das chaves de tradução. Dashboard, Members (MembersView), Settings (SettingsView), Sidebar (role label), Auth, Callback, Onboarding, Invite/Remove/Resend modals, ProfileEdit – tudo traduzido.
+- **UI (shadcn):** Sidebar com shadcn (`Sidebar`, `SidebarTrigger`); regra `.cursor/rules/shadcn-ui.mdc`. Páginas com classes de tema para light/dark.
+- **Outros:** Middleware em `src/middleware.ts`; `setAll` em try/catch em `src/lib/supabase/server.ts`; `src/lib/safe-fetch.ts` – `fetchWithRetry`; `src/lib/i18n-cookie.ts` para definir cookie em Route Handlers. RLS em `docs/RLS_POLICIES.sql` (incl. `organization_invites_owner_admin_manage`).
 
 ---
 

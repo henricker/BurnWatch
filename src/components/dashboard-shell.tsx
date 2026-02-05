@@ -1,5 +1,6 @@
 "use client";
 
+import type { Role } from "@prisma/client";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { PreferencesSync } from "@/components/preferences-sync";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -9,14 +10,14 @@ import { Separator } from "@/components/ui/separator";
 
 export function DashboardShell({
   organizationName,
-  roleLabel,
+  profileRole,
   organizationId,
   theme,
   locale,
   children,
 }: {
   organizationName: string;
-  roleLabel: string;
+  profileRole: Role;
   organizationId?: string;
   theme?: string | null;
   locale?: string | null;
@@ -25,7 +26,7 @@ export function DashboardShell({
   return (
     <>
       <PreferencesSync theme={theme} />
-      <AppSidebar organizationName={organizationName} roleLabel={roleLabel} />
+      <AppSidebar organizationName={organizationName} profileRole={profileRole} />
       <SidebarInset>
         <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />

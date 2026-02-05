@@ -1,6 +1,6 @@
 # BurnWatch – STATE (end of Milestone 02)
 
-Este documento resume o estado atual da base de código após a implementação do **Milestone 02: Organization Invitation System (Magic Links)** e ajustes de UI (RBAC, tema light/dark, shadcn). Serve como contexto inicial para outras AIs (ex.: Gemini) continuarem o trabalho.
+Este documento resume o estado atual da base de código após a implementação do **Milestone 02: Organization Invitation System (Magic Links)** e ajustes de UI (RBAC, tema light/dark, shadcn, **i18n pt/en/es** com troca instantânea). Serve como contexto inicial para outras AIs (ex.: Gemini) continuarem o trabalho.
 
 ---
 
@@ -36,7 +36,7 @@ Arquivo: `prisma/schema.prisma`
       - `role: Role` – enum `OWNER | ADMIN | MEMBER` (default `MEMBER`).
       - `firstName`, `lastName`, `avatarPath` (opcionais).
       - `theme: String?` – preferência de tema (`"light" | "dark" | "system"`, default `"system"`).
-      - `locale: String?` – preferência de idioma (`"pt" | "en"`, default `"pt"`).
+      - `locale: String?` – preferência de idioma (`"pt" | "en" | "es"`, default `"pt"`).
     - Constraints:
       - `@@unique([userId, organizationId], name: "profile_user_org_unique")`.
   - `OrganizationInvite`
@@ -217,30 +217,32 @@ Arquivo: `src/app/onboarding/page.tsx`
 
 - **Layout:** `src/app/dashboard/layout.tsx` – Server Component que chama `getSessionProfile()` (redireciona para `/` se não autenticado, para `/onboarding` se sem profile). Renderiza `SidebarProvider` e `DashboardShell` (nome da org, role, theme/locale para header).
 - **Sidebar:** shadcn `Sidebar` com `AppSidebar` (Dashboard, Members, Settings); colapsável; ícones e tooltips.
-- **Header:** `SidebarTrigger` + no canto direito `ThemeToggle` (Light/Dark/System) e `LocaleSwitcher` (PT/EN). Tema e idioma são salvos no perfil via `PATCH /api/profile`; ao carregar o dashboard, `PreferencesSync` aplica `profile.theme` uma vez (next-themes).
-- **Página dashboard:** `src/app/dashboard/page.tsx` – placeholder; futuramente gasto e projeções.
+- **Header:** `SidebarTrigger` + no canto direito `ThemeToggle` (Light/Dark/System) e `LocaleSwitcher` (PT/EN/ES). Tema e idioma são salvos no perfil via `PATCH /api/profile`; ao carregar o dashboard, `PreferencesSync` aplica `profile.theme` uma vez (next-themes). Troca de idioma é **instantânea na UI** (sem refresh); persistência no perfil em background.
+- **Página dashboard:** `src/app/dashboard/page.tsx` (Client Component) – placeholder com textos via i18n; futuramente gasto e projeções.
 
 ### Membros
 
-Arquivo: `src/app/dashboard/members/page.tsx`
-
-- Lista **Membros Atuais** (Profile na org) e **Convites Pendentes** (OrganizationInvite não expirados).
-- Ações: Convidar (modal com email e role), Remover membro, Reenviar convite.
-- APIs: `POST /api/invites`, `DELETE /api/members/[profileId]`, `PATCH /api/profile` (dados + theme/locale).
-- UI com classes de tema (`text-foreground`, `bg-card`, `border-border`, etc.) para light/dark.
+- **Server:** `src/app/dashboard/members/page.tsx` busca profile, org, membros e convites; passa dados para **Client:** `MembersView` em `src/app/dashboard/members/MembersView.tsx`.
+- Lista **Membros Atuais** e **Convites Pendentes**; Convidar (modal), Remover, Reenviar. Todas as strings via `useTranslations()` para atualização imediata ao trocar idioma.
+- APIs: `POST /api/invites`, `DELETE /api/members/[profileId]`, `PATCH /api/profile`.
 
 ### Settings
 
-Arquivo: `src/app/dashboard/settings/page.tsx`
-
-- Seções: **Perfil** (nome, sobrenome, avatar via `ProfileEditForm`), **Organization** (nome da org, role do usuário), **Danger zone** (apenas para OWNER; delete org previsto para milestone futuro).
-- Avatar: upload para bucket `profile`; signed URL gerada em `src/lib/avatar.ts` com service role para leitura.
+- **Server:** `src/app/dashboard/settings/page.tsx` busca profile e org; **Client:** `SettingsView` em `src/app/dashboard/settings/SettingsView.tsx` – seções Perfil, Organization, Danger zone (OWNER). Avatar com signed URL (bucket `profile`). Textos via i18n.
 
 ### Tema (light/dark) e preferências
 
 - **next-themes** no layout raiz (`ThemeProvider` com `attribute="class"`, `defaultTheme="system"`).
-- Tema e locale armazenados em `Profile.theme` e `Profile.locale`; aplicados no header do dashboard e sincronizados ao carregar (PreferencesSync aplica tema uma vez).
-- **Regra de UI:** `.cursor/rules/shadcn-ui.mdc` – usar sempre componentes shadcn; páginas e componentes usam variáveis de tema (foreground, muted-foreground, card, border, primary, destructive) para funcionar em light e dark.
+- Tema e locale em `Profile.theme` e `Profile.locale`; PreferencesSync aplica tema ao carregar.
+- **Regra de UI:** `.cursor/rules/shadcn-ui.mdc` – usar shadcn; variáveis de tema para light/dark.
+
+### i18n (next-intl, pt / en / es)
+
+- **Biblioteca:** next-intl; locale via cookie `NEXT_LOCALE` (definido em auth/complete, onboarding/complete e PATCH /api/profile).
+- **Config:** `src/i18n/request.ts` – `getRequestConfig` lê o cookie e carrega `messages/{locale}.json`; `src/i18n/locales.ts` – tipo `Locale`, `isValidLocale`, locales pt/en/es.
+- **Mensagens:** `messages/pt.json`, `messages/en.json`, `messages/es.json` (chaves por namespace: Auth, Callback, Onboarding, Dashboard, Members, Invite, RemoveMember, ResendInvite, Settings, ProfileEdit, Sidebar, Theme, Locale, Roles, Common).
+- **Troca instantânea:** `LocaleOverrideProvider` (client) mantém override de locale + cache de mensagens; ao selecionar idioma no `LocaleSwitcher`, a UI atualiza na hora (client components com `useTranslations()`); persistência no perfil em background (sem `router.refresh()`). `GET /api/messages/[locale]` serve os JSONs para o client. Páginas de dashboard (placeholder), membros e settings usam client views que consomem traduções para evitar “dois tempos” na troca de idioma.
+- **Alias:** `@messages/*` em `tsconfig.json` para importar os JSONs na API.
 
 ### Middleware e resiliência
 
@@ -369,11 +371,13 @@ Comparado à descrição em `docs/sprints/SPRINT_01.md` (Milestone 2), o que foi
 - **Settings**
   - `/dashboard/settings`: Perfil (nome, sobrenome, avatar), Organization, Danger zone (OWNER). Avatar com signed URL (bucket `profile`).
 - **Tema e locale**
-  - next-themes no layout; ThemeToggle e LocaleSwitcher no header do dashboard; preferências salvas no perfil; PreferencesSync aplica tema ao carregar.
+  - next-themes no layout; ThemeToggle e LocaleSwitcher (PT/EN/ES) no header; preferências salvas no perfil; PreferencesSync aplica tema ao carregar; troca de idioma instantânea (override no client, persistência em background).
+- **i18n**
+  - next-intl com pt, en, es; mensagens em `messages/*.json`; cookie `NEXT_LOCALE`; `LocaleOverrideProvider` + `GET /api/messages/[locale]` para troca imediata sem refresh; client views (MembersView, SettingsView, dashboard page) com `useTranslations()` para toda a UI traduzida atualizar na hora.
 - **UI (shadcn e tema)**
-  - Sidebar shadcn; regra `shadcn-ui.mdc`; páginas de membros e settings com classes de tema para light/dark.
+  - Sidebar shadcn; regra `shadcn-ui.mdc`; páginas com classes de tema para light/dark.
 - **Resiliência**
-  - Middleware com try/catch e timeout; Supabase server `setAll` em try/catch; `fetchWithRetry` no cliente.
+  - Middleware com try/catch e timeout; Supabase server `setAll` em try/catch; `fetchWithRetry` no cliente; `setLocaleCookie` em auth/complete, onboarding/complete e PATCH profile.
 
-Em resumo: **convites por magic link, onboarding, gestão de membros, preferências de tema/idioma e UI adaptada ao tema** estão prontos. Próximos passos (Milestone 3+): adapters de cloud, sync, dashboard com dados de gasto.
+Em resumo: **convites por magic link, onboarding, gestão de membros, preferências de tema/idioma (pt, en, es) com troca instantânea e UI adaptada ao tema** estão prontos. Próximos passos (Milestone 3+): adapters de cloud, sync, dashboard com dados de gasto.
 

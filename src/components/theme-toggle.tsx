@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
+import { useTranslations } from "next-intl";
 import { Moon, Sun, Monitor } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,6 +38,7 @@ export function ThemeToggle({
   organizationId?: string;
   currentTheme?: string | null;
 }) {
+  const t = useTranslations("Theme");
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme, resolvedTheme } = useTheme();
   const value = (theme ?? currentTheme ?? "system") as Theme;
@@ -65,24 +67,24 @@ export function ThemeToggle({
           ) : (
             <Monitor className="size-4" />
           )}
-          <span className="sr-only">Theme</span>
+          <span className="sr-only">{t("label")}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuLabel>Theme</DropdownMenuLabel>
+        <DropdownMenuLabel>{t("label")}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuRadioGroup value={value} onValueChange={(v) => handleSelect(v as Theme)}>
           <DropdownMenuRadioItem value="light">
             <Sun className="mr-2 size-4" />
-            Light
+            {t("light")}
           </DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="dark">
             <Moon className="mr-2 size-4" />
-            Dark
+            {t("dark")}
           </DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="system">
             <Monitor className="mr-2 size-4" />
-            System
+            {t("system")}
           </DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
       </DropdownMenuContent>

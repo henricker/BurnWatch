@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 import { fetchWithRetry } from "@/lib/safe-fetch";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -11,6 +12,8 @@ type OnboardingStatus = "idle" | "loading" | "success" | "error";
 const supabase = createSupabaseBrowserClient();
 
 export default function OnboardingPage() {
+  const t = useTranslations("Onboarding");
+  const tCommon = useTranslations("Common");
   const router = useRouter();
   const [orgName, setOrgName] = useState<string>("");
   const [firstName, setFirstName] = useState<string>("");
@@ -27,13 +30,13 @@ export default function OnboardingPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!orgName.trim()) {
-      setErrorMessage("Organization name is required.");
+      setErrorMessage(t("orgNameRequired"));
       setStatus("error");
       return;
     }
 
     if (!firstName.trim() || !lastName.trim()) {
-      setErrorMessage("First name and last name are required.");
+      setErrorMessage(t("nameRequired"));
       setStatus("error");
       return;
     }
@@ -51,9 +54,7 @@ export default function OnboardingPage() {
         } = await supabase.auth.getUser();
 
         if (error || !user) {
-          throw new Error(
-            error?.message ?? "Unable to load authenticated user for avatar.",
-          );
+          throw new Error(error?.message ?? t("unableToLoadUser"));
         }
 
         const fileExt = avatarFile.name.split(".").pop() ?? "png";
@@ -90,9 +91,7 @@ export default function OnboardingPage() {
       if (!response.ok) {
         const data = (await response.json()) as { error?: string };
         setStatus("error");
-        setErrorMessage(
-          data.error ?? "Failed to create organization. Please try again.",
-        );
+        setErrorMessage(data.error ?? t("createFailed"));
         return;
       }
 
@@ -107,10 +106,10 @@ export default function OnboardingPage() {
         error instanceof TypeError && (error as Error).message?.includes("fetch");
       setErrorMessage(
         isNetwork
-          ? "Network error. Please try again."
+          ? tCommon("networkError")
           : error instanceof Error
             ? error.message
-            : "Unexpected error.",
+            : t("createFailed"),
       );
     }
   }
@@ -120,11 +119,10 @@ export default function OnboardingPage() {
       <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900/80 p-8 shadow-xl">
         <div className="mb-6 space-y-2">
           <h1 className="text-2xl font-semibold tracking-tight">
-            Create your workspace
+            {t("title")}
           </h1>
           <p className="text-sm text-zinc-400">
-            Before you start tracking spend, we need to create your Organization
-            (workspace). This step is required.
+            {t("subtitle")}
           </p>
         </div>
 
@@ -134,14 +132,14 @@ export default function OnboardingPage() {
               htmlFor="org-name"
               className="block text-sm font-medium text-zinc-200"
             >
-              Organization name
+              {t("orgName")}
             </label>
             <input
               id="org-name"
               type="text"
               value={orgName}
               onChange={(event) => setOrgName(event.target.value)}
-              placeholder="ex: Acme Infra, My Startup"
+              placeholder={t("orgNamePlaceholder")}
               className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-50 outline-none ring-0 transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-500/40"
               required
             />
@@ -153,14 +151,14 @@ export default function OnboardingPage() {
                 htmlFor="first-name"
                 className="block text-sm font-medium text-zinc-200"
               >
-                First name
+                {t("firstName")}
               </label>
               <input
                 id="first-name"
                 type="text"
                 value={firstName}
                 onChange={(event) => setFirstName(event.target.value)}
-                placeholder="Jane"
+                placeholder={t("firstNamePlaceholder")}
                 className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-50 outline-none ring-0 transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-500/40"
                 required
               />
@@ -170,14 +168,14 @@ export default function OnboardingPage() {
                 htmlFor="last-name"
                 className="block text-sm font-medium text-zinc-200"
               >
-                Last name
+                {t("lastName")}
               </label>
               <input
                 id="last-name"
                 type="text"
                 value={lastName}
                 onChange={(event) => setLastName(event.target.value)}
-                placeholder="Doe"
+                placeholder={t("lastNamePlaceholder")}
                 className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-50 outline-none ring-0 transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-500/40"
                 required
               />
@@ -189,7 +187,7 @@ export default function OnboardingPage() {
               htmlFor="avatar"
               className="block text-sm font-medium text-zinc-200"
             >
-              Avatar (optional)
+              {t("avatarOptional")}
             </label>
             <input
               id="avatar"
@@ -199,7 +197,7 @@ export default function OnboardingPage() {
               className="w-full text-sm text-zinc-300 file:mr-4 file:rounded-md file:border-0 file:bg-zinc-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-900 hover:file:bg-white"
             />
             <p className="text-xs text-zinc-500">
-              Used in headers/sidebars. You can change this later.
+              {t("avatarHint")}
             </p>
           </div>
 
@@ -208,14 +206,14 @@ export default function OnboardingPage() {
             disabled={status === "loading"}
             className="flex w-full items-center justify-center rounded-md bg-zinc-100 px-3 py-2 text-sm font-medium text-zinc-900 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-70"
           >
-            {status === "loading" ? "Creating workspace..." : "Create workspace"}
+            {status === "loading" ? t("creatingWorkspace") : t("createWorkspace")}
           </button>
         </form>
 
         <div className="mt-4 min-h-[1.5rem] text-sm">
           {status === "success" && (
             <p className="text-emerald-400">
-              Workspace created. Redirecting to your dashboard...
+              {t("workspaceCreated")}
             </p>
           )}
           {status === "error" && errorMessage && (
@@ -224,8 +222,7 @@ export default function OnboardingPage() {
         </div>
 
         <p className="mt-6 text-xs text-zinc-500">
-          BurnWatch will use this Organization as the primary container for your
-          cloud accounts, spend data and alerts.
+          {t("footer")}
         </p>
       </div>
     </div>

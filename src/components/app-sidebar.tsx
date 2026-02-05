@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
+import type { Role } from "@prisma/client";
 import {
   LayoutDashboard,
   Users,
@@ -19,20 +21,23 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 
-const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/dashboard/members", label: "Members", icon: Users },
-  { href: "/dashboard/settings", label: "Settings", icon: Settings },
-] as const;
-
 export function AppSidebar({
   organizationName,
-  roleLabel,
+  profileRole,
 }: {
   organizationName: string;
-  roleLabel: string;
+  profileRole: Role;
 }) {
+  const t = useTranslations("Sidebar");
+  const tRoles = useTranslations("Roles");
   const pathname = usePathname();
+  const roleLabel = tRoles(profileRole);
+
+  const navItems = [
+    { href: "/dashboard", labelKey: "dashboard" as const, icon: LayoutDashboard },
+    { href: "/dashboard/members", labelKey: "members" as const, icon: Users },
+    { href: "/dashboard/settings", labelKey: "settings" as const, icon: Settings },
+  ] as const;
 
   return (
     <Sidebar collapsible="icon">
@@ -46,23 +51,26 @@ export function AppSidebar({
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel>{t("navigation")}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.map(({ href, label, icon: Icon }) => (
-                <SidebarMenuItem key={href}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={pathname === href || (href !== "/dashboard" && pathname.startsWith(href))}
-                    tooltip={label}
-                  >
-                    <Link href={href}>
-                      <Icon className="size-4 shrink-0" />
-                      <span>{label}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {navItems.map(({ href, labelKey, icon: Icon }) => {
+                const label = t(labelKey);
+                return (
+                  <SidebarMenuItem key={href}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={pathname === href || (href !== "/dashboard" && pathname.startsWith(href))}
+                      tooltip={label}
+                    >
+                      <Link href={href}>
+                        <Icon className="size-4 shrink-0" />
+                        <span>{label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

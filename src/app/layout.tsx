@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages } from "next-intl/server";
 import { ThemeProvider } from "@/components/theme-provider";
+import { LocaleOverrideProvider } from "@/components/locale-override-provider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -18,19 +21,28 @@ export const metadata: Metadata = {
   description: "Monitor your cloud spend",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getLocale();
+  const messages = await getMessages();
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          {children}
-        </ThemeProvider>
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <LocaleOverrideProvider
+            serverLocale={locale}
+            serverMessages={messages as Record<string, unknown>}
+          >
+            <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+              {children}
+            </ThemeProvider>
+          </LocaleOverrideProvider>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

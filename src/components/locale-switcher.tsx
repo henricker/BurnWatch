@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Languages } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,26 +12,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useLocaleOverride } from "@/components/locale-override-provider";
+import { isValidLocale, type Locale } from "@/i18n/locales";
 
-const LOCALES = ["pt", "en"] as const;
-type Locale = (typeof LOCALES)[number];
-
-async function saveLocaleToProfile(
-  organizationId: string,
-  locale: string,
-): Promise<boolean> {
-  try {
-    const { fetchWithRetry } = await import("@/lib/safe-fetch");
-    const res = await fetchWithRetry("/api/profile", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ organizationId, locale }),
-    });
-    return res.ok;
-  } catch {
-    return false;
-  }
-}
+const LOCALES: Locale[] = ["pt", "en", "es"];
 
 export function LocaleSwitcher({
   organizationId,
@@ -40,17 +24,12 @@ export function LocaleSwitcher({
   organizationId?: string;
   currentLocale?: string | null;
 }) {
-  const router = useRouter();
-  const value = (currentLocale && LOCALES.includes(currentLocale as Locale) ? currentLocale : "pt") as Locale;
+  const t = useTranslations("Locale");
+  const overrideContext = useLocaleOverride();
+  const value: Locale = overrideContext?.effectiveLocale ?? (currentLocale && isValidLocale(currentLocale) ? currentLocale : "pt");
 
   function handleSelect(next: Locale) {
-    if (organizationId) {
-      void saveLocaleToProfile(organizationId, next).then(() => {
-        router.refresh();
-      });
-    } else {
-      router.refresh();
-    }
+    overrideContext?.setLocaleOverride(next, organizationId);
   }
 
   return (
@@ -58,15 +37,16 @@ export function LocaleSwitcher({
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="size-9">
           <Languages className="size-4" />
-          <span className="sr-only">Language</span>
+          <span className="sr-only">{t("label")}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuLabel>Language</DropdownMenuLabel>
+        <DropdownMenuLabel>{t("label")}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuRadioGroup value={value} onValueChange={(v) => handleSelect(v as Locale)}>
-          <DropdownMenuRadioItem value="pt">PT</DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="en">EN</DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="pt">{t("pt")}</DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="en">{t("en")}</DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="es">{t("es")}</DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
       </DropdownMenuContent>
     </DropdownMenu>

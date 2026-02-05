@@ -1,0 +1,136 @@
+{
+  "Auth": {
+    "title": "Entrar no BurnWatch",
+    "subtitle": "Digite seu e-mail e enviaremos um link mágico. Sem senhas, apenas acesso seguro ao seu workspace.",
+    "workEmail": "E-mail corporativo",
+    "emailPlaceholder": "voce@empresa.com",
+    "sendingMagicLink": "Enviando link mágico...",
+    "sendMagicLink": "Enviar link mágico",
+    "continueWithGithub": "Continuar com GitHub",
+    "magicLinkSent": "Link mágico enviado. Confira sua caixa de entrada para continuar.",
+    "disclaimer": "Ao entrar, você concorda em manter suas credenciais de nuvem seguras. O BurnWatch usará apenas acesso somente leitura para monitorar gastos por você.",
+    "emailRequired": "E-mail é obrigatório.",
+    "unexpectedError": "Erro inesperado."
+  },
+  "Callback": {
+    "title": "Finalizando login",
+    "confirmingSession": "Confirmando sua sessão. Pode levar um momento...",
+    "noSession": "Nenhuma sessão ativa. Solicite um novo link mágico.",
+    "authFailed": "Falha ao finalizar autenticação. Tente novamente mais tarde.",
+    "signedInRedirecting": "Você está conectado. Redirecionando...",
+    "backToSignIn": "Voltar ao login",
+    "networkError": "Erro de rede. Tente novamente.",
+    "confirmSessionFailed": "Falha ao confirmar sessão."
+  },
+  "Onboarding": {
+    "title": "Crie seu workspace",
+    "subtitle": "Antes de começar a acompanhar gastos, precisamos criar sua Organização (workspace). Esta etapa é obrigatória.",
+    "orgName": "Nome da organização",
+    "orgNamePlaceholder": "ex: Acme Infra, Minha Startup",
+    "firstName": "Nome",
+    "lastName": "Sobrenome",
+    "firstNamePlaceholder": "Maria",
+    "lastNamePlaceholder": "Silva",
+    "avatarOptional": "Avatar (opcional)",
+    "avatarHint": "Usado em cabeçalhos e barra lateral. Você pode alterar depois.",
+    "creatingWorkspace": "Criando workspace...",
+    "createWorkspace": "Criar workspace",
+    "workspaceCreated": "Workspace criado. Redirecionando ao seu dashboard...",
+    "footer": "O BurnWatch usará esta Organização como o container principal para suas contas de nuvem, dados de gasto e alertas.",
+    "orgNameRequired": "O nome da organização é obrigatório.",
+    "nameRequired": "Nome e sobrenome são obrigatórios.",
+    "createFailed": "Falha ao criar organização. Tente novamente.",
+    "unableToLoadUser": "Não foi possível carregar o usuário autenticado para o avatar."
+  },
+  "Dashboard": {
+    "title": "BurnWatch Dashboard (placeholder)",
+    "signedInMessage": "Você está conectado. Este dashboard mostrará gastos, projeções e anomalias nos próximos milestones."
+  },
+  "Members": {
+    "title": "Gerenciamento de Membros",
+    "subtitle": "Gerencie suas conexões",
+    "currentMembers": "Membros Atuais",
+    "pendingInvites": "Convites Pendentes",
+    "member": "Membro",
+    "status": "Status",
+    "actions": "Ações",
+    "you": "(você)",
+    "active": "Ativo",
+    "pending": "Pendente",
+    "role": "Função",
+    "noPendingInvites": "Nenhum convite pendente."
+  },
+  "Invite": {
+    "button": "+ Convidar Membro",
+    "title": "Convidar Membro",
+    "email": "E-mail",
+    "emailPlaceholder": "colega@exemplo.com",
+    "role": "Função",
+    "cancel": "Cancelar",
+    "sending": "Enviando…",
+    "sendInvite": "Enviar convite",
+    "failedToSend": "Falha ao enviar convite."
+  },
+  "RemoveMember": {
+    "remove": "Remover",
+    "confirm": "Remover {name}?",
+    "thisMember": "este membro",
+    "yes": "Sim",
+    "no": "Não",
+    "failed": "Falha ao remover membro."
+  },
+  "ResendInvite": {
+    "resend": "Reenviar",
+    "rateLimit": "Muitos e-mails enviados. Aguarde alguns minutos antes de reenviar.",
+    "failed": "Falha ao reenviar convite."
+  },
+  "Settings": {
+    "title": "Configurações",
+    "profile": "Perfil",
+    "profileDescription": "Edite seu nome, sobrenome e avatar.",
+    "organization": "Organização",
+    "yourRole": "Sua função: {role}",
+    "dangerZone": "Zona de perigo",
+    "dangerZoneDescription": "Excluir a organização removerá todos os membros, contas de nuvem e dados de faturamento. Isso não pode ser desfeito.",
+    "dangerZoneFuture": "(Excluir organização será implementado em um milestone futuro.)"
+  },
+  "ProfileEdit": {
+    "avatar": "Avatar",
+    "change": "Alterar",
+    "firstName": "Nome",
+    "lastName": "Sobrenome",
+    "firstNamePlaceholder": "Seu nome",
+    "lastNamePlaceholder": "Seu sobrenome",
+    "saveChanges": "Salvar alterações",
+    "saving": "Salvando…",
+    "updated": "Perfil atualizado.",
+    "saveFailed": "Falha ao salvar.",
+    "networkError": "Erro de rede. Tente novamente."
+  },
+  "Sidebar": {
+    "navigation": "Navegação",
+    "dashboard": "Dashboard",
+    "members": "Membros",
+    "settings": "Configurações"
+  },
+  "Theme": {
+    "label": "Tema",
+    "light": "Claro",
+    "dark": "Escuro",
+    "system": "Sistema"
+  },
+  "Locale": {
+    "label": "Idioma",
+    "pt": "PT",
+    "en": "EN",
+    "es": "ES"
+  },
+  "Roles": {
+    "OWNER": "Proprietário",
+    "ADMIN": "Admin",
+    "MEMBER": "Membro"
+  },
+  "Common": {
+    "networkError": "Erro de rede. Tente novamente."
+  }
+}
