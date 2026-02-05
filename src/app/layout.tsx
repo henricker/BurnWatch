@@ -38,7 +38,7 @@ export default async function RootLayout({
             serverLocale={locale}
             serverMessages={messages as Record<string, unknown>}
           >
-            <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+            <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
               {children}
             </ThemeProvider>
           </LocaleOverrideProvider>
