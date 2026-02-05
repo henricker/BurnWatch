@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Organization {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  profiles     Profile[]
+  cloudAccounts CloudAccount[]
+  dailySpends   DailySpend[]
+
+  @@map("organizations")
+}
+
+model Profile {
+  id String @id @default(uuid()) @db.Uuid
+
+  /// Supabase auth user id (UUID) from auth.users
+  userId String @db.Uuid @map("user_id")
+
+  organizationId String        @db.Uuid @map("organization_id")
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  role String
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, organizationId], name: "profile_user_org_unique")
+  @@map("profiles")
+}
+
+enum CloudProvider {
+  AWS
+  VERCEL
+  GCP
+  OTHER
+}
+
+model CloudAccount {
+  id String @id @default(uuid()) @db.Uuid
+
+  organizationId String       @db.Uuid @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  provider CloudProvider
+
+  /// Human readable name for this account (e.g. "Prod AWS")
+  label String
+
+  /// Encrypted credentials payload (AES-256-GCM).
+  /// Stored as serialized string: iv:authTag:ciphertext
+  encryptedCredentials String @map("encrypted_credentials")
+
+  /// Optional metadata (e.g. account id, region) as JSON.
+  metadata Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([organizationId], name: "cloud_account_org_idx")
+  @@map("cloud_accounts")
+}
+
+model DailySpend {
+  id String @id @default(uuid()) @db.Uuid
+
+  organizationId String       @db.Uuid @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  /// Date of the spend (UTC date, no time component).
+  date DateTime @map("date")
+
+  /// Cloud provider that generated this spend (normalized).
+  provider CloudProvider
+
+  /// Service name (e.g. "Lambda", "S3", "Edge Functions").
+  serviceName String @map("service_name")
+
+  /// Amount in cents (integer) to avoid floating point drift.
+  amountCents Int @map("amount_cents")
+
+  /// Optional currency code (e.g. "USD").
+  currency String? @default("USD")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  /// Composite unique index to guarantee idempotent syncs.
+  @@unique([organizationId, provider, serviceName, date], name: "daily_spend_org_provider_service_date_unique")
+
+  @@index([organizationId, date], name: "daily_spend_org_date_idx")
+  @@map("daily_spend")
+}
+
