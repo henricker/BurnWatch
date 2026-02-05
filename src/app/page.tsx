@@ -1,65 +1,116 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useState, type FormEvent } from "react";
+
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+
+type AuthStatus = "idle" | "loading" | "success" | "error";
+
+const supabase = createSupabaseBrowserClient();
+
+export default function AuthPage() {
+  const [email, setEmail] = useState<string>("");
+  const [status, setStatus] = useState<AuthStatus>("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!email) {
+      setErrorMessage("Email is required.");
+      setStatus("error");
+      return;
+    }
+
+    setStatus("loading");
+    setErrorMessage(null);
+
+    try {
+      const redirectTo =
+        typeof window !== "undefined"
+          ? `${window.location.origin}/auth/callback`
+          : undefined;
+
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: redirectTo,
+        },
+      });
+
+      if (error) {
+        setErrorMessage(error.message);
+        setStatus("error");
+        return;
+      }
+
+      setStatus("success");
+    } catch (error: unknown) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Unexpected error.",
+      );
+      setStatus("error");
+    }
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div className="flex min-h-screen items-center justify-center bg-zinc-950 px-4 text-zinc-50">
+      <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900/80 p-8 shadow-xl">
+        <div className="mb-8 space-y-2">
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Sign in to BurnWatch
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="text-sm text-zinc-400">
+            Enter your email and we&apos;ll send you a magic link. No passwords,
+            just secure access to your workspace.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <label
+              htmlFor="email"
+              className="block text-sm font-medium text-zinc-200"
+            >
+              Work email
+            </label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="you@company.com"
+              className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-50 outline-none ring-0 transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-500/40"
+              autoComplete="email"
+              required
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+          </div>
+
+          <button
+            type="submit"
+            disabled={status === "loading"}
+            className="flex w-full items-center justify-center rounded-md bg-zinc-100 px-3 py-2 text-sm font-medium text-zinc-900 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-70"
           >
-            Documentation
-          </a>
+            {status === "loading" ? "Sending magic link..." : "Send magic link"}
+          </button>
+        </form>
+
+        <div className="mt-4 min-h-[1.5rem] text-sm">
+          {status === "success" && (
+            <p className="text-emerald-400">
+              Magic link sent. Check your inbox to continue.
+            </p>
+          )}
+          {status === "error" && errorMessage && (
+            <p className="text-rose-400">{errorMessage}</p>
+          )}
         </div>
-      </main>
+
+        <p className="mt-6 text-xs text-zinc-500">
+          By signing in, you agree to keep your cloud credentials safe. BurnWatch
+          will only use read-only access to monitor spend on your behalf.
+        </p>
+      </div>
     </div>
   );
 }

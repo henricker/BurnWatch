@@ -1,0 +1,81 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+
+type CallbackStatus = "verifying" | "success" | "error";
+
+const supabase = createSupabaseBrowserClient();
+
+export default function AuthCallbackPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [status, setStatus] = useState<CallbackStatus>("verifying");
+  const [message, setMessage] = useState<string>(
+    "Confirming your session. This may take a moment...",
+  );
+
+  useEffect(() => {
+    async function confirmSession() {
+      try {
+        // For implicit flow, initialize the client so it can
+        // capture tokens from the URL fragment if present.
+        await supabase.auth.initialize();
+
+        const { data, error } = await supabase.auth.getSession();
+        if (error || !data.session) {
+          setStatus("error");
+          setMessage(
+            error?.message ??
+              "No active session found. Try requesting a new magic link.",
+          );
+          return;
+        }
+
+        setStatus("success");
+        setMessage("You are signed in. Redirecting to your dashboard...");
+
+        setTimeout(() => {
+          router.replace("/dashboard");
+        }, 1200);
+      } catch (error: unknown) {
+        setStatus("error");
+        setMessage(
+          error instanceof Error ? error.message : "Failed to confirm session.",
+        );
+      }
+    }
+
+    void confirmSession();
+  }, [router, searchParams]);
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-zinc-950 px-4 text-zinc-50">
+      <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900/80 p-8 shadow-xl">
+        <div className="space-y-3">
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Finishing sign-in
+          </h1>
+          <p className="text-sm text-zinc-400">{message}</p>
+        </div>
+
+        {status === "verifying" && (
+          <div className="mt-6 h-8 w-8 animate-spin rounded-full border-2 border-zinc-600 border-t-zinc-100" />
+        )}
+
+        {status === "error" && (
+          <button
+            type="button"
+            onClick={() => router.replace("/")}
+            className="mt-6 flex w-full items-center justify-center rounded-md bg-zinc-100 px-3 py-2 text-sm font-medium text-zinc-900 transition hover:bg-white"
+          >
+            Back to sign in
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+

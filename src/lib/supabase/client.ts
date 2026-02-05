@@ -12,6 +12,11 @@ export function createSupabaseBrowserClient(): SupabaseClient {
     );
   }
 
-  return createBrowserClient(url, key);
+  return createBrowserClient(url, key, {
+    auth: {
+      // Simpler for magic links in the MVP: avoid PKCE storage issues.
+      flowType: "implicit",
+    },
+  });
 }
 
