@@ -33,6 +33,15 @@ Build the end-to-end "Steel Thread": Setup Supabase Auth/DB, connect a cloud pro
 - **Vercel Adapter:** - Integration with Vercel Billing API.
     - **Normalization:** Map response to our `DailySpend` schema.
     - **Integer Math:** All values must be handled in **Cents**.
+ - **Workspace Model (Organizations):**
+     - Treat `Organization` as the **Workspace** concept (multi-tenant container).
+     - Every authenticated user must be associated to exactly one `Organization` via `Profile`.
+ - **Organization Invites (Magic Link):**
+     - Design an invite flow where an **Organization Owner** can generate a **magic-link invite** tied to their `organization_id`.
+     - When an invite link is accepted (Supabase Auth magic link or GitHub OAuth), automatically:
+         - create (or connect) the Supabase `auth.user`,
+         - upsert the corresponding `Profile` row with the same `organization_id`.
+     - Invitations must be **idempotent** (re-using the same link does not create duplicate profiles or organizations).
 
 ---
 
