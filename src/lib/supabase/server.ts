@@ -21,9 +21,15 @@ export async function createSupabaseServerClient(): Promise<SupabaseClient> {
         return cookieStore.getAll();
       },
       setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value, options }) =>
-          cookieStore.set(name, value, options as CookieOptions),
-        );
+        try {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, options as CookieOptions),
+          );
+        } catch {
+          // Next.js only allows setting cookies in Route Handlers or Server Actions.
+          // In Server Components (e.g. layout) we must no-op so the page still renders.
+          // Session refresh will persist on the next request that runs in a Route Handler.
+        }
       },
     },
   });

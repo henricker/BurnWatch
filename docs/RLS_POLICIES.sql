@@ -84,6 +84,60 @@ with check (
 );
 
 --------------------------------------------------------------------------------
+-- ORGANIZATION_INVITES
+-- Only OWNER and ADMIN can manage invites for their organization.
+--
+-- If you get "cannot drop column role ... policy ... depends on it" when running
+-- `prisma db push` (e.g. after changing profiles.role to enum), run this first
+-- in the Supabase SQL Editor, then run `npx prisma db push`, then re-apply the
+-- create policy below:
+--
+--   drop policy if exists "organization_invites_owner_admin_manage" on public.organization_invites;
+--------------------------------------------------------------------------------
+
+alter table public.organization_invites enable row level security;
+
+create policy "organization_invites_owner_admin_manage" on public.organization_invites
+for all
+using (
+  exists (
+    select 1
+    from public.profiles p
+    where p.organization_id = organization_invites.organization_id
+      and p.user_id = auth.uid()
+      and p.role in ('OWNER', 'ADMIN')
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.profiles p
+    where p.organization_id = organization_invites.organization_id
+      and p.user_id = auth.uid()
+      and p.role in ('OWNER', 'ADMIN')
+  )
+);
+
+--------------------------------------------------------------------------------
+-- STORAGE: profile bucket (avatars)
+-- Used during onboarding and profile updates. Path format: {auth.uid()}/avatar-*.{ext}
+-- Run in Supabase SQL Editor. Requires bucket "profile" to exist in Storage.
+--------------------------------------------------------------------------------
+
+create policy "profile_bucket_own_folder_all"
+on storage.objects
+for all
+to authenticated
+using (
+  bucket_id = 'profile'
+  and (storage.foldername(name))[1] = (select auth.jwt()->>'sub')
+)
+with check (
+  bucket_id = 'profile'
+  and (storage.foldername(name))[1] = (select auth.jwt()->>'sub')
+);
+
+--------------------------------------------------------------------------------
 -- NOTE:
 -- Any new tenant-aware table MUST include an `organization_id` column and
 -- follow this same pattern:

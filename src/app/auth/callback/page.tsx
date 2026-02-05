@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
+import { fetchWithRetry } from "@/lib/safe-fetch";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type CallbackStatus = "verifying" | "success" | "error";
 
 const supabase = createSupabaseBrowserClient();
 
-export default function AuthCallbackPage() {
+function AuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<CallbackStatus>("verifying");
@@ -34,16 +35,41 @@ export default function AuthCallbackPage() {
           return;
         }
 
+        // Send the session token so the server can complete auth (invite application, etc.).
+        // The server may not have the session in cookies yet when coming from a magic link.
+        const response = await fetchWithRetry("/api/auth/complete", {
+          headers: {
+            Authorization: `Bearer ${data.session.access_token}`,
+          },
+        });
+        if (!response.ok) {
+          const data = (await response.json()) as { error?: string };
+          setStatus("error");
+          setMessage(
+            data.error ??
+              "Failed to finalize authentication. Please try again later.",
+          );
+          return;
+        }
+
+        const dataJson = (await response.json()) as { next: string };
+
         setStatus("success");
-        setMessage("You are signed in. Redirecting to your dashboard...");
+        setMessage("You are signed in. Redirecting...");
 
         setTimeout(() => {
-          router.replace("/dashboard");
+          router.replace(dataJson.next);
         }, 1200);
       } catch (error: unknown) {
         setStatus("error");
+        const isNetwork =
+          error instanceof TypeError && (error as Error).message?.includes("fetch");
         setMessage(
-          error instanceof Error ? error.message : "Failed to confirm session.",
+          isNetwork
+            ? "Network error. Please try again."
+            : error instanceof Error
+              ? error.message
+              : "Failed to confirm session.",
         );
       }
     }
@@ -76,6 +102,20 @@ export default function AuthCallbackPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function AuthCallbackPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-zinc-950 px-4 text-zinc-50">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-600 border-t-zinc-100" />
+        </div>
+      }
+    >
+      <AuthCallbackContent />
+    </Suspense>
   );
 }
 

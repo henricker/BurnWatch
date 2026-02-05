@@ -1,0 +1,17 @@
+---
+description: Always use shadcn/ui for UI components and styling
+alwaysApply: true
+---
+
+# Always use shadcn/ui
+
+For **all UI work** in this project, use **shadcn/ui** components and patterns.
+
+- **Buttons, inputs, forms**: Use `Button`, `Input`, `Label`, `Select`, etc. from `@/components/ui/`.
+- **Layout**: Use `Card`, `Separator`, `Sidebar`, `Sheet` when applicable.
+- **Feedback**: Use `Dialog`, `Tooltip`, `Skeleton` for modals, hints, and loading states.
+- **Data**: Use `Table` for lists/tables; use `Avatar` for user avatars.
+
+Do **not** build custom-styled elements (e.g. raw `<button>`, `<input>` with manual Tailwind) when a shadcn component exists. Prefer adding a new shadcn component via the CLI (`pnpm dlx shadcn@latest add <component>`) if needed, then use it.
+
+Existing shadcn components live in `src/components/ui/`. Import from `@/components/ui/<name>`.
