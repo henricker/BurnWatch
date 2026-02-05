@@ -12,6 +12,7 @@ Build the end-to-end "Steel Thread": Setup Supabase Auth/DB, connect a cloud pro
 - **Supabase Integration:**
     - Use Supabase Auth for User Management.
     - Implement **Row Level Security (RLS)**: Users should only see data from their own `Organization`.
+    - Initial Auth methods: **Email Magic Link** (primary) and groundwork for OAuth providers (e.g. GitHub) in later milestones.
 - **Prisma Schema (Supabase-ready):**
     - `Organization`: Primary container.
     - `Profile`: Linked to Supabase `auth.users` via UUID.
@@ -20,6 +21,12 @@ Build the end-to-end "Steel Thread": Setup Supabase Auth/DB, connect a cloud pro
 - **Security Primitives:**
     - `EncryptionService`: AES-256-GCM for API keys before saving to DB.
     - Use `@supabase/supabase-js` for client/server communication.
+- **Auth UI:**
+    - Implement a minimal **Login/Signup screen** using Supabase Auth with **email magic link**.
+    - The screen must support:
+        - entering an email to receive a magic link;
+        - basic success/error feedback (e.g. “check your inbox”).
+    - This screen will be the entry point to the workspace (`Organization`) once Milestone 2 introduces invitation flows.
 
 > **Cursor Instruction:** "Setup the Prisma schema with Supabase Auth integration. Create an Organization-based multi-tenancy structure. Also, implement the AES-256-GCM Encryption utility for cloud credentials."
 
