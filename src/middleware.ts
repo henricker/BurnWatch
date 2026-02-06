@@ -31,10 +31,12 @@ export async function middleware(request: NextRequest) {
     const timeoutPromise = new Promise<{ data: { user: null } }>((resolve) =>
       setTimeout(() => resolve({ data: { user: null } }), AUTH_CHECK_TIMEOUT_MS),
     );
-    const { data: { user } } = await Promise.race([userPromise, timeoutPromise]);
+    const {
+      data: { user },
+    } = await Promise.race([userPromise, timeoutPromise]);
 
     // Logged-in users visiting the login page go to dashboard
-    if (request.nextUrl.pathname === "/" && user) {
+    if (request.nextUrl.pathname === "/login" && user) {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
   } catch {
@@ -45,5 +47,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/"],
+  matcher: ["/login"],
 };
