@@ -13,8 +13,39 @@ export interface SessionProfile {
 }
 
 /**
+ * Returns the current session user and optionally their first profile.
+ * Redirects to /login when not authenticated. Does not redirect when user has no profile.
+ * Use this on /onboarding to show the form only when user exists and profile does not.
+ */
+export async function getSessionOptionalProfile(): Promise<{
+  user: { id: string; email: string | null };
+  profile: (Profile & { organization: Organization }) | null;
+}> {
+  const supabase = await createSupabaseServerClient();
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    redirect("/login");
+  }
+
+  const profile = await prisma.profile.findFirst({
+    where: { userId: user.id },
+    include: { organization: true },
+  });
+
+  return {
+    user: { id: user.id, email: user.email ?? null },
+    profile,
+  };
+}
+
+/**
  * Returns the current session user and their first organization profile.
- * Redirects to / if not authenticated, and to /onboarding if no profile exists.
+ * Redirects to /login when not authenticated, and to /onboarding when no profile exists.
  */
 export async function getSessionProfile(): Promise<SessionProfile> {
   const supabase = await createSupabaseServerClient();
@@ -25,7 +56,7 @@ export async function getSessionProfile(): Promise<SessionProfile> {
   } = await supabase.auth.getUser();
 
   if (userError || !user) {
-    redirect("/");
+    redirect("/login");
   }
 
   const profile = await prisma.profile.findFirst({

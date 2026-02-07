@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
 
+import { fetchWithRetry } from "@/lib/safe-fetch";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type AuthStatus = "idle" | "loading" | "success" | "error";
@@ -11,6 +12,7 @@ const supabase = createSupabaseBrowserClient();
 
 export default function LoginPage() {
   const t = useTranslations("Auth");
+  const tCommon = useTranslations("Common");
   const [email, setEmail] = useState<string>("");
   const [status, setStatus] = useState<AuthStatus>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -36,24 +38,23 @@ export default function LoginPage() {
     setErrorMessage(null);
 
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: getRedirectUrl(),
-        },
+      const res = await fetchWithRetry("/api/auth/send-magic-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
       });
 
-      if (error) {
-        setErrorMessage(error.message);
+      const data = (await res.json()) as { error?: string };
+
+      if (!res.ok) {
+        setErrorMessage(data.error ?? t("unexpectedError"));
         setStatus("error");
         return;
       }
 
       setStatus("success");
-    } catch (error: unknown) {
-      setErrorMessage(
-        error instanceof Error ? error.message : t("unexpectedError"),
-      );
+    } catch {
+      setErrorMessage(tCommon("networkError"));
       setStatus("error");
     }
   }

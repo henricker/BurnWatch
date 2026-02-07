@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import type { Role } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
+import { createSupabaseOtpClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createInvite, InviteError } from "@/modules/organizations/application/inviteService";
 
@@ -58,11 +59,18 @@ export async function POST(request: Request) {
     );
   }
 
-  const origin = new URL(request.url).origin;
-  const emailRedirectTo = `${origin}/auth/callback`;
+  // Use canonical app URL so the magic link redirect matches Supabase Redirect URL allow list.
+  // Set NEXT_PUBLIC_APP_URL in .env (e.g. http://localhost:3000 or https://app.example.com).
+  const appOrigin =
+    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ??
+    new URL(request.url).origin;
+  const emailRedirectTo = `${appOrigin}/auth/callback`;
 
   try {
-    await createInvite(prisma, supabase, {
+    // Use OTP client with implicit flow so the magic link redirects with #access_token=...
+    // instead of ?code=..., avoiding "PKCE code verifier not found" for the invitee.
+    const otpClient = createSupabaseOtpClient();
+    await createInvite(prisma, otpClient, {
       adminId: user.id,
       organizationId,
       guestEmail: email.trim(),

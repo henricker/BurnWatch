@@ -49,6 +49,7 @@ export default async function MembersPage() {
     id: inv.id,
     email: inv.email,
     role: inv.role,
+    expiresAt: inv.expiresAt.toISOString().slice(0, 10),
   }));
 
   return (

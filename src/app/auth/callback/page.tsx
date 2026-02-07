@@ -21,9 +21,44 @@ function AuthCallbackContent() {
   useEffect(() => {
     async function confirmSession() {
       try {
-        // For implicit flow, initialize the client so it can
-        // capture tokens from the URL fragment if present.
+        // Supabase may redirect with error params when the magic link expired or was already used.
+        const errorCode = searchParams.get("error_code");
+        const errorDesc = searchParams.get("error_description");
+        if (errorCode === "otp_expired" || (searchParams.get("error") === "access_denied" && errorDesc?.includes("expired"))) {
+          setStatus("error");
+          setMessage(t("linkExpired"));
+          return;
+        }
+
         await supabase.auth.initialize();
+
+        // If redirect has ?code=... (PKCE), exchange it.
+        const code = searchParams.get("code");
+        if (code) {
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          if (exchangeError) {
+            setStatus("error");
+            setMessage(exchangeError.message ?? t("noSession"));
+            return;
+          }
+        } else if (typeof window !== "undefined" && window.location.hash) {
+          // Implicit flow: tokens are in the fragment (#access_token=...&refresh_token=...).
+          // Parse and set session explicitly so it's stored (cookies) and getSession() returns it.
+          const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+          const access_token = params.get("access_token");
+          const refresh_token = params.get("refresh_token");
+          if (access_token && refresh_token) {
+            const { error: setError } = await supabase.auth.setSession({
+              access_token,
+              refresh_token,
+            });
+            if (setError) {
+              setStatus("error");
+              setMessage(setError.message ?? t("noSession"));
+              return;
+            }
+          }
+        }
 
         const { data, error } = await supabase.auth.getSession();
         if (error || !data.session) {
@@ -51,8 +86,10 @@ function AuthCallbackContent() {
         setStatus("success");
         setMessage(t("signedInRedirecting"));
 
+        // Full page redirect so the next request (dashboard/onboarding) receives
+        // the session cookies set by the Supabase client.
         setTimeout(() => {
-          router.replace(dataJson.next);
+          window.location.replace(dataJson.next);
         }, 1200);
       } catch (error: unknown) {
         setStatus("error");
@@ -88,7 +125,7 @@ function AuthCallbackContent() {
         {status === "error" && (
           <button
             type="button"
-            onClick={() => router.replace("/")}
+            onClick={() => router.replace("/login")}
             className="mt-6 flex w-full items-center justify-center rounded-md bg-zinc-100 px-3 py-2 text-sm font-medium text-zinc-900 transition hover:bg-white"
           >
             {t("backToSignIn")}

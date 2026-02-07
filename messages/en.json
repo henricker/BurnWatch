@@ -16,6 +16,7 @@
     "title": "Finishing sign-in",
     "confirmingSession": "Confirming your session. This may take a moment...",
     "noSession": "No active session found. Try requesting a new magic link.",
+    "linkExpired": "This invite link has expired or was already used. Ask an admin to resend the invite and use the new link from the email.",
     "authFailed": "Failed to finalize authentication. Please try again later.",
     "signedInRedirecting": "You are signed in. Redirecting...",
     "backToSignIn": "Back to sign in",
@@ -78,9 +79,9 @@
     "trendSafe": "Safe"
   },
   "Members": {
-    "title": "Member Management",
-    "subtitle": "Manage your connections",
-    "currentMembers": "Current Members",
+    "title": "Team Management",
+    "subtitle": "Members & permissions",
+    "currentMembers": "Active Team",
     "pendingInvites": "Pending Invites",
     "member": "Member",
     "status": "Status",
@@ -89,21 +90,38 @@
     "active": "Active",
     "pending": "Pending",
     "role": "Role",
-    "noPendingInvites": "No pending invites."
+    "noPendingInvites": "No pending invites.",
+    "statSeatsActive": "Active Seats",
+    "statSeatsSubtext": "Members in org",
+    "statPending": "Pending",
+    "statPendingSubtext": "Awaiting link",
+    "statAdmins": "Admins",
+    "statAdminsSubtext": "Root privileges",
+    "searchPlaceholder": "Filter by name or email…",
+    "access": "Access",
+    "awaitingAccept": "Awaiting acceptance",
+    "expires": "Expires",
+    "newMemberButton": "New Member",
+    "teamActive": "Active Team",
+    "prodReady": "Prod Ready"
   },
   "Invite": {
     "button": "+ Invite Member",
-    "title": "Invite Member",
+    "title": "New Member",
     "email": "Email",
-    "emailPlaceholder": "colleague@example.com",
-    "role": "Role",
+    "emailLabel": "Work email",
+    "emailPlaceholder": "e.g. cto@my-startup.com",
+    "role": "Access level",
     "cancel": "Cancel",
     "sending": "Sending…",
     "sendInvite": "Send invite",
-    "failedToSend": "Failed to send invite."
+    "failedToSend": "Failed to send invite.",
+    "memberCardDesc": "View dashboards and receive alerts.",
+    "adminCardDesc": "Manage API keys and team invites."
   },
   "RemoveMember": {
     "remove": "Remove",
+    "modalTitle": "Remove member",
     "confirm": "Remove {name}?",
     "thisMember": "this member",
     "yes": "Yes",
@@ -124,6 +142,12 @@
     "dangerZone": "Danger zone",
     "dangerZoneDescription": "Deleting the organization will remove all members, cloud accounts, and billing data. This cannot be undone.",
     "dangerZoneFuture": "(Delete organization will be implemented in a future milestone.)"
+  },
+  "CompleteProfile": {
+    "title": "Complete your profile",
+    "subtitle": "Add your name and avatar to appear in the team.",
+    "saveAndContinue": "Save and continue",
+    "nameRequired": "First and last name are required."
   },
   "ProfileEdit": {
     "avatar": "Avatar",
