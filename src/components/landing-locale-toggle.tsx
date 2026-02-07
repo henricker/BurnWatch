@@ -12,7 +12,9 @@ import { Globe } from "lucide-react";
  */
 export function LandingLocaleToggle() {
   const t = useTranslations("Locale");
-  const { effectiveLocale, setLocaleOverride } = useLocaleOverride();
+  const ctx = useLocaleOverride();
+  const effectiveLocale = ctx?.effectiveLocale ?? "en";
+  const setLocaleOverride = ctx?.setLocaleOverride ?? (() => {});
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
