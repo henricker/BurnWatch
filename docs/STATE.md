@@ -1,6 +1,6 @@
-# BurnWatch – STATE (end of Milestone 02)
+# BurnWatch – STATE (Milestone 02 concluído e funcional)
 
-Este documento resume o estado atual da base de código após a implementação do **Milestone 02: Organization Invitation System (Magic Links)** e ajustes de UI (RBAC, tema light/dark, shadcn, **i18n pt/en/es** com troca instantânea), além do **polimento do produto público**: landing page na root, login em `/login`, i18n e copy transcultural na landing, favicon e logo. Serve como contexto inicial para outras AIs (ex.: Gemini) continuarem o trabalho.
+Este documento resume o estado atual da base de código após a conclusão do **Milestone 02: Organization & Member System**. Inclui: sistema de convites (magic links), RBAC (Owner, Admin, Member), tema light/dark, shadcn, **i18n pt/en/es** com troca instantânea, **tela de Configurações com redesign e regras por role**, **APIs de organização (PATCH nome, DELETE com limpeza de auth)**, modal de confirmação ao eliminar organização e botão de guardar desativado quando não há alterações. Inclui também o polimento do produto público (landing, login, copy transcultural, favicon e logo). Serve como contexto para outras AIs (ex.: Gemini) continuarem o trabalho.
 
 ---
 
@@ -215,7 +215,9 @@ Arquivo: `src/app/onboarding/page.tsx`
 
 ### Settings
 
-- **Server:** `src/app/dashboard/settings/page.tsx` busca profile e org; **Client:** `SettingsView` em `src/app/dashboard/settings/SettingsView.tsx` – seções Perfil, Organization, Danger zone (OWNER). Avatar com signed URL (bucket `profile`). Textos via i18n.
+- **Server:** `src/app/dashboard/settings/page.tsx` busca profile, org e email via `getSessionProfile()`; calcula `showDeleteOrg` (só OWNER) e `canEditOrgName` (OWNER ou ADMIN) com `src/lib/roles.ts` (`canDeleteOrganization`, `canUpdateOrganizationName`). Passa esses flags e dados iniciais para **Client:** `SettingsView` em `src/app/dashboard/settings/SettingsView.tsx`.
+- **SettingsView (redesign):** Header com ícone Settings, título "Configurações", subtítulo i18n, botão único "Guardar alterações" que submete o formulário (desativado quando não há alterações – `isDirty` com base em nome, apelido, nome da org e avatar). Secção **Perfil:** avatar (upload para bucket `profile`), nome, apelido, e-mail read-only com badge "Verificado". Secção **Organização:** OWNER/ADMIN editam nome do workspace e veem id da org (read-only); MEMBER vê nome e id em só leitura. Secção **Zona de perigo** (apenas OWNER): card "Kernel.Terminate()", botão "Destruir workspace" que abre **modal de confirmação** (i18n: título e corpo); ao confirmar, `DELETE /api/organization`, depois `signOut()` e redirecionar para `/`. Layout e padding alinhados à tela de membros: `p-4 md:p-8`, `max-w-6xl`, `space-y-8`.
+- **APIs de organização:** `PATCH /api/organization` (body `{ name: string }`) – só OWNER ou ADMIN; `DELETE /api/organization` – só OWNER; no DELETE o servidor obtém todos os perfis da org, elimina cada utilizador no Supabase Auth (`admin.auth.admin.deleteUser`), depois `prisma.organization.delete()` (cascade remove profiles, invites, cloud accounts, daily spends).
 
 ### Tema (light/dark) e preferências
 
@@ -352,7 +354,7 @@ Comparado à descrição em `docs/sprints/SPRINT_01.md` (Milestone 2), o que foi
 - **Schema**
   - `OrganizationInvite` com unique `(organizationId, email)`; `Profile.role` como enum `Role` (OWNER/ADMIN/MEMBER); `Profile.theme` e `Profile.locale` para preferências.
 - **RBAC**
-  - `src/lib/roles.ts`: `ROLE_LABELS`, `canManageMembers`, `canDeleteOrganization`; hierarquia no invite (não convidar com role superior).
+  - `src/lib/roles.ts`: `ROLE_LABELS`, `canManageMembers`, `canDeleteOrganization`, `canUpdateOrganizationName` (OWNER e ADMIN podem alterar nome da organização); hierarquia no invite (não convidar com role superior).
 - **Invite Service**
   - `src/modules/organizations/application/inviteService.ts`: `createInvite` com validação e `signInWithOtp` com `emailRedirectTo` para `/auth/callback`.
 - **Auth completion**
@@ -361,8 +363,10 @@ Comparado à descrição em `docs/sprints/SPRINT_01.md` (Milestone 2), o que foi
   - `/onboarding` com formulário (org, nome, avatar); `POST /api/onboarding/complete` cria Organization + Profile (OWNER).
 - **Member Management**
   - `/dashboard/members`: membros atuais + convites pendentes; Convidar, Remover, Reenviar. APIs: `POST /api/invites`, `DELETE /api/members/[profileId]`, `PATCH /api/profile`.
-- **Settings**
-  - `/dashboard/settings`: Perfil (nome, sobrenome, avatar), Organization, Danger zone (OWNER). Avatar com signed URL (bucket `profile`).
+- **Settings (redesign e regras por role)**
+  - `/dashboard/settings`: Redesign com header (ícone, título, subtítulo, botão único "Guardar alterações" desativado quando não há alterações). Perfil: nome, apelido, avatar (upload bucket `profile`), e-mail read-only com badge Verificado. Organização: OWNER/ADMIN editam nome da org e veem id; MEMBER vê nome e id em só leitura. Zona de perigo (só OWNER): card "Kernel.Terminate()", botão "Destruir workspace" que abre modal de confirmação; ao confirmar, DELETE organização (ver abaixo), signOut e redirect para `/`. Layout padronizado com a tela de membros: `p-4 md:p-8`, `max-w-6xl`.
+  - **APIs de organização:** `src/app/api/organization/route.ts`: `PATCH` (atualiza nome da org; OWNER ou ADMIN); `DELETE` (só OWNER: obtém todos os perfis da org, elimina cada `auth.users` via Supabase Admin `deleteUser`, depois `prisma.organization.delete()` com cascade).
+  - **Modal de eliminação:** Dialog com título e corpo i18n (`deleteOrgConfirmTitle`, `deleteOrgConfirmBody`), botões Cancelar e "Sim, eliminar tudo"; estado de loading durante o DELETE.
 - **Tema e locale**
   - next-themes no layout; ThemeToggle e LocaleSwitcher (PT/EN/ES) no header; preferências salvas no perfil; PreferencesSync aplica tema ao carregar; troca de idioma instantânea (override no client, persistência em background).
 - **i18n**
@@ -380,5 +384,7 @@ Comparado à descrição em `docs/sprints/SPRINT_01.md` (Milestone 2), o que foi
 - **Resiliência**
   - Middleware com try/catch e timeout; Supabase server `setAll` em try/catch; `fetchWithRetry` no cliente; `setLocaleCookie` em auth/complete, onboarding/complete e PATCH profile.
 
-Em resumo: **convites por magic link, onboarding, gestão de membros, preferências de tema/idioma (pt, en, es) com troca instantânea, UI adaptada ao tema, landing pública i18n com copy transcultural e preços por idioma** estão prontos. Próximos passos (Milestone 3+): adapters de cloud, sync, dashboard com dados de gasto.
+**Conclusão Milestone 02:** Todo o comportamento da Milestone 02 está concluído e funcional: convites por magic link, onboarding, gestão de membros com RBAC, preferências de tema/idioma (pt, en, es) com troca instantânea, UI adaptada ao tema, landing pública i18n com copy transcultural e preços por idioma, **tela de Configurações com redesign (estilo Gemini), regras por role (OWNER/ADMIN/MEMBER), atualização e eliminação total da organização (incluindo auth dos membros no Supabase), modal de confirmação ao eliminar e botão Guardar desativado quando não há alterações**.
+
+**Próximo passo – Milestone 3: Credential Management UI (CRUD)** (cf. `docs/sprints/SPRINT_01.md`): criar a interface onde o utilizador conecta as suas nuvens de forma segura: telas de conexão para adicionar CloudAccount (Vercel, AWS, GCP); usar o EncryptionService já existente para encriptar os tokens no save; UX de feedback com status "Ligado" (placeholder até ao Sync Engine) e permitir renomear/remover contas.
 

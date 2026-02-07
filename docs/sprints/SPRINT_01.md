@@ -17,11 +17,12 @@ Construir a "Steel Thread" técnica do BurnWatch: desde a autenticação e gest�
 
 ## ✅ Milestone 2: Organization & Member System
 
-**Status:** Concluído
+**Status:** Concluído e funcional
 
 - Sistema de convites atómico.
 - Gestão de membros com RBAC (Owner, Admin, Member).
 - i18n (PT, EN, ES) e Dark/Light mode base.
+- **Configurações (Settings):** Redesign alinhado ao layout da tela de membros; regras por role (OWNER: editar perfil, nome da org, eliminar organização; ADMIN: editar perfil e nome da org, sem zona de perigo; MEMBER: editar perfil, organização em só leitura, sem zona de perigo). API PATCH/DELETE para organização; modal de confirmação crítica ao eliminar; botão "Guardar alterações" desativado quando não há alterações.
 
 ---
 
