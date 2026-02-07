@@ -1,11 +1,12 @@
 "use client";
 
-import React from "react";
+import React, { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import {
   Zap,
   Check,
+  CheckCircle2,
   Cloud,
   Globe,
   ShieldCheck,
@@ -19,11 +20,13 @@ import {
   Clock,
   MessageSquare,
   Hash,
+  Loader2,
 } from "lucide-react";
 
 import BurnWatchLogo from "@/components/burnwatch-logo";
-import { LandingThemeToggle } from "@/components/landing-theme-toggle";
 import { LandingLocaleToggle } from "@/components/landing-locale-toggle";
+import { LandingThemeToggle } from "@/components/landing-theme-toggle";
+import { fetchWithRetry } from "@/lib/safe-fetch";
 
 /** Preço por idioma: pt = Reais, en/es = Dólares */
 const PRICING = {
@@ -32,10 +35,48 @@ const PRICING = {
   es: { starter: "$49", pro: "$149" },
 } as const;
 
+type HeroStatus = "idle" | "loading" | "success" | "error";
+
 export function LandingContent() {
   const locale = useLocale() as keyof typeof PRICING;
   const t = useTranslations("Landing");
+  const tAuth = useTranslations("Auth");
+  const tCommon = useTranslations("Common");
   const prices = PRICING[locale] ?? PRICING.en;
+
+  const [heroEmail, setHeroEmail] = useState("");
+  const [heroStatus, setHeroStatus] = useState<HeroStatus>("idle");
+  const [heroError, setHeroError] = useState<string | null>(null);
+
+  async function handleHeroSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const email = heroEmail.trim();
+    if (!email) {
+      setHeroError(tAuth("emailRequired"));
+      setHeroStatus("error");
+      return;
+    }
+    setHeroStatus("loading");
+    setHeroError(null);
+    try {
+      const res = await fetchWithRetry("/api/auth/send-magic-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        setHeroError(data.error ?? tAuth("unexpectedError"));
+        setHeroStatus("error");
+        return;
+      }
+      setHeroEmail(email);
+      setHeroStatus("success");
+    } catch {
+      setHeroError(tCommon("networkError"));
+      setHeroStatus("error");
+    }
+  }
 
   return (
     <div className="landing-bg-grid min-h-screen font-sans text-zinc-900 selection:bg-orange-500/30 dark:bg-[#050505] dark:text-[#f5f5f5]">
@@ -102,25 +143,73 @@ export function LandingContent() {
             <p className="mx-auto mb-10 max-w-2xl text-lg leading-relaxed text-zinc-600 lg:mx-0 dark:text-zinc-400">
               {t("heroSubtitle")}
             </p>
-            <div className="mx-auto flex max-w-md flex-col gap-4 sm:flex-row lg:mx-0">
-              <div className="group relative flex-1">
-                <Mail
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 transition-colors group-focus-within:text-orange-500 dark:text-zinc-600"
-                  size={16}
-                />
-                <input
-                  type="email"
-                  placeholder={t("emailPlaceholder")}
-                  className="h-12 w-full rounded border border-zinc-200 bg-zinc-100 pl-10 pr-4 text-sm text-zinc-900 outline-none transition-all focus:border-orange-500/50 dark:border-[#1a1a1a] dark:bg-[#0a0a0a] dark:text-white"
-                />
+            {heroStatus === "success" ? (
+              <div className="mx-auto max-w-md animate-in fade-in slide-in-from-bottom-4 rounded-xl border border-green-500/20 bg-green-500/5 p-6 text-center dark:bg-green-500/10 lg:mx-0">
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-green-500/20 bg-green-500/10 text-green-500 shadow-[0_0_20px_rgba(34,197,94,0.15)] dark:bg-green-500/20">
+                  <CheckCircle2 size={28} />
+                </div>
+                <h3 className="mb-2 text-lg font-bold tracking-tight text-zinc-900 dark:text-white">
+                  {tAuth("linkSentTitle")}
+                </h3>
+                <p className="mb-4 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                  {tAuth("linkSentDescription")}
+                  <br />
+                  <span className="mt-2 inline-block rounded border border-zinc-200 bg-white px-2 py-1 font-mono text-xs font-bold text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
+                    {heroEmail}
+                  </span>
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHeroStatus("idle");
+                    setHeroError(null);
+                    setHeroEmail("");
+                  }}
+                  className="border-b border-orange-500/20 pb-0.5 text-[10px] font-bold uppercase tracking-widest text-orange-500 transition-colors hover:text-orange-600"
+                >
+                  {tAuth("useAnotherEmail")}
+                </button>
               </div>
-              <Link
-                href="/login"
-                className="glow-orange-small flex h-12 items-center justify-center gap-2 rounded bg-[#f97316] px-6 text-[10px] font-bold uppercase tracking-widest text-white transition-all hover:bg-[#ea580c]"
+            ) : (
+              <form
+                onSubmit={handleHeroSubmit}
+                className="mx-auto flex max-w-md flex-col gap-4 sm:flex-row lg:mx-0"
               >
-                {t("ctaInstant")} <ArrowRight size={14} />
-              </Link>
-            </div>
+                <div className="group relative flex-1">
+                  <Mail
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 transition-colors group-focus-within:text-orange-500 dark:text-zinc-600"
+                    size={16}
+                  />
+                  <input
+                    type="email"
+                    placeholder={t("emailPlaceholder")}
+                    value={heroEmail}
+                    onChange={(e) => setHeroEmail(e.target.value)}
+                    className="h-12 w-full rounded border border-zinc-200 bg-zinc-100 pl-10 pr-4 text-sm text-zinc-900 outline-none transition-all focus:border-orange-500/50 dark:border-[#1a1a1a] dark:bg-[#0a0a0a] dark:text-white"
+                    autoComplete="email"
+                    disabled={heroStatus === "loading"}
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={heroStatus === "loading"}
+                  className="glow-orange-small flex h-12 items-center justify-center gap-2 rounded bg-[#f97316] px-6 text-[10px] font-bold uppercase tracking-widest text-white transition-all hover:bg-[#ea580c] disabled:opacity-70"
+                >
+                  {heroStatus === "loading" ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <>
+                      {t("ctaInstant")} <ArrowRight size={14} />
+                    </>
+                  )}
+                </button>
+              </form>
+            )}
+            {heroStatus === "error" && heroError && (
+              <p className="mx-auto mt-3 max-w-md text-sm text-rose-500 lg:mx-0">
+                {heroError}
+              </p>
+            )}
             <div className="mt-12 flex items-center justify-center gap-10 opacity-40 transition-opacity hover:opacity-100 lg:justify-start">
               <div className="flex items-center gap-2 font-mono text-sm uppercase tracking-tighter">
                 <Globe size={18} /> Vercel
