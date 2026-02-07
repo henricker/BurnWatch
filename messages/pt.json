@@ -227,8 +227,8 @@
     "collabTitle": "Feito para equipas de alta performance.",
     "collabSubtitle": "Partilhe os indicadores de custo com toda a equipa sem comprometer a segurança. Controle permissões e centralize a governação financeira da sua startup.",
     "collabCta": "Ver Gestão de Membros",
-    "pricingTitle": "Cresça com Previsibilidade.",
-    "pricingSubtitle": "Pague em Reais, monitorize em Dólares. Escolha o plano que melhor se adapta à escala da sua operação.",
+    "pricingTitle": "Pague em Reais, monitore em Dólares.",
+    "pricingSubtitle": "Escolha o plano que melhor se adapta à escala da sua operação. Tenha previsibilidade total sobre a sua fatura cloud, sem sustos com o câmbio.",
     "pricingStarter": "Plano Starter",
     "pricingPro": "Plano Pro",
     "perMonth": "/mês",
@@ -242,7 +242,7 @@
     "proFeature3": "Relatórios Semanais (PDF)",
     "proFeature4": "Membros Ilimitados",
     "selectStarter": "Selecionar Starter",
-    "selectPro": "Selecionar Pro",
+    "selectPro": "Começar em Reais",
     "pricingDisclaimer": "* Facturamento original em USD. Câmbio flutuante aplicado na visualização.",
     "footerCopy": "© 2026 BurnWatch • Infra-First observability"
   }

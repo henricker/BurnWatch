@@ -227,8 +227,8 @@
     "collabTitle": "Built for high-performance teams.",
     "collabSubtitle": "Share cost metrics with the whole team without compromising security. Control permissions and centralize your startup's financial governance.",
     "collabCta": "View member management",
-    "pricingTitle": "Grow with predictability.",
-    "pricingSubtitle": "Pay in Reais, monitor in Dollars. Choose the plan that fits your scale.",
+    "pricingTitle": "Predictable Growth. Scalable Control.",
+    "pricingSubtitle": "Pick the plan that fits your current burn rate. Stop cloud waste and get the financial visibility your startup needs to scale with confidence.",
     "pricingStarter": "Starter plan",
     "pricingPro": "Pro plan",
     "perMonth": "/month",
@@ -242,7 +242,7 @@
     "proFeature3": "Weekly reports (PDF)",
     "proFeature4": "Unlimited members",
     "selectStarter": "Select Starter",
-    "selectPro": "Select Pro",
+    "selectPro": "Start Scaling",
     "pricingDisclaimer": "* Billing in USD. Floating exchange rate applied for display.",
     "footerCopy": "© 2026 BurnWatch • Infra-first observability"
   }
