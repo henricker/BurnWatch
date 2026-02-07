@@ -175,7 +175,11 @@
     "dashboard": "Dashboard",
     "members": "Membros",
     "settings": "Configurações",
-    "logout": "Sair"
+    "logout": "Sair",
+    "appearance": "Aparência",
+    "accountManagement": "Gestão de Conta",
+    "myProfile": "Meu Perfil",
+    "endSession": "Encerrar Sessão"
   },
   "Theme": {
     "label": "Tema",

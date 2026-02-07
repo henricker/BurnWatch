@@ -34,6 +34,8 @@ export default async function DashboardLayout({
           organizationId={organization.id}
           theme={profile.theme}
           locale={profile.locale}
+          avatarUrl={avatarUrl}
+          profileDisplayName={[profile.firstName, profile.lastName].filter(Boolean).join(" ") || null}
         >
           {children}
         </DashboardShell>

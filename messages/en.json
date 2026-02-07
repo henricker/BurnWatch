@@ -175,7 +175,11 @@
     "dashboard": "Dashboard",
     "members": "Members",
     "settings": "Settings",
-    "logout": "Log out"
+    "logout": "Log out",
+    "appearance": "Appearance",
+    "accountManagement": "Account",
+    "myProfile": "My Profile",
+    "endSession": "Sign out"
   },
   "Theme": {
     "label": "Theme",

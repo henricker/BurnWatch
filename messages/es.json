@@ -175,7 +175,11 @@
     "dashboard": "Panel",
     "members": "Miembros",
     "settings": "Configuración",
-    "logout": "Salir"
+    "logout": "Salir",
+    "appearance": "Apariencia",
+    "accountManagement": "Cuenta",
+    "myProfile": "Mi Perfil",
+    "endSession": "Cerrar sesión"
   },
   "Theme": {
     "label": "Tema",
