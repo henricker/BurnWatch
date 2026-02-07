@@ -41,14 +41,41 @@ Identify "Zombies"—forgotten instances, idle GPUs, and orphaned storage volume
 
 * **Security First:** AES-256-GCM encryption for all cloud credentials. We never store what we don't need.
 * **Adapter-Based Engine:** A modular architecture that allows adding new cloud providers in hours, not weeks.
-* **Lightweight & Edge-Ready:** Built on **Next.js 14**, optimized for low-latency dashboards and global reach.
+* **Lightweight & Edge-Ready:** Built on **Next.js** (App Router), Supabase (Auth + Postgres), and Prisma; optimized for low-latency dashboards and global reach.
 * **Predictive Layer:** Custom math engine for trend analysis and anomaly scoring.
+
+---
+
+## 📍 Current Status (Sprint 01)
+
+**Done:** Milestone 1 (Auth & multi-tenancy) and **Milestone 2 (Organization & member system)** are complete and functional:
+
+- Magic link + GitHub auth, onboarding, organization invites, RBAC (Owner / Admin / Member).
+- Team management (members, pending invites), Settings (profile, org name, delete org with confirmation).
+- i18n (PT, EN, ES) with instant locale switch; light/dark theme; landing page with transcultural copy and pricing.
+
+**Next:** **Milestone 3 – Credential Management UI (CRUD):** connection screens for Vercel, AWS, GCP; encrypt tokens on save; status “Connected” and rename/remove accounts.
+
+See `docs/sprints/SPRINT_01.md` for the full sprint plan and `docs/STATE.md` for technical context and env setup.
+
+---
+
+## 🏃 Development
+
+```bash
+pnpm install
+# Create .env with DATABASE_URL, DIRECT_URL, Supabase keys, ENCRYPTION_KEY (see docs/STATE.md §9)
+pnpm db:push           # or pnpm prisma migrate dev
+pnpm dev
+```
+
+Required env vars and details: **§9** in `docs/STATE.md`.
 
 ---
 
 ## 📈 Roadmap & Vision
 
-- **Q1:** MVP - Vercel & AWS connectivity + Core Projection Engine.
+- **Q1:** MVP - Vercel & AWS & GCP connectivity + Core Projection Engine.
 - **Q2:** Intelligent Alerts - Slack/Discord integration with 1-click remediation.
 - **Q3:** AI-Spend Monitoring - Tracking LLM token usage (OpenAI/Anthropic) as part of infra costs.
 - **Q4:** Auto-Optimization - AI-driven suggestions for Spot Instances and Reserved Capacity.
