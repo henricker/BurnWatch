@@ -31,6 +31,11 @@ export function canDeleteOrganization(role: Role): boolean {
   return role === "OWNER";
 }
 
+/** OWNER and ADMIN can update organization name; MEMBER is read-only. */
+export function canUpdateOrganizationName(role: Role): boolean {
+  return role === "OWNER" || role === "ADMIN";
+}
+
 /** OWNER cannot be removed by anyone. */
 export function isProtectedRole(role: Role): boolean {
   return role === "OWNER";
