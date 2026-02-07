@@ -166,8 +166,9 @@
   },
   "Landing": {
     "navFeatures": "Features",
-    "navIntegration": "Integration",
+    "navSecurity": "Security",
     "navAlerts": "Alerts",
+    "navIntegration": "Integration",
     "navPricing": "Pricing",
     "signIn": "Sign in",
     "getStarted": "Get started",

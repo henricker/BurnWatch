@@ -166,8 +166,9 @@
   },
   "Landing": {
     "navFeatures": "Diferenciais",
-    "navIntegration": "Integração",
+    "navSecurity": "Segurança",
     "navAlerts": "Alertas",
+    "navIntegration": "Integração",
     "navPricing": "Preços",
     "signIn": "Entrar",
     "getStarted": "Começar",

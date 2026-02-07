@@ -57,11 +57,14 @@ export function LandingContent() {
             <a href="#features" className="transition-colors hover:text-zinc-900 dark:hover:text-white">
               {t("navFeatures")}
             </a>
-            <a href="#how-it-works" className="transition-colors hover:text-zinc-900 dark:hover:text-white">
-              {t("navIntegration")}
+            <a href="#security" className="transition-colors hover:text-zinc-900 dark:hover:text-white">
+              {t("navSecurity")}
             </a>
             <a href="#alerts" className="transition-colors hover:text-zinc-900 dark:hover:text-white">
               {t("navAlerts")}
+            </a>
+            <a href="#how-it-works" className="transition-colors hover:text-zinc-900 dark:hover:text-white">
+              {t("navIntegration")}
             </a>
             <a href="#pricing" className="transition-colors hover:text-zinc-900 dark:hover:text-white">
               {t("navPricing")}
