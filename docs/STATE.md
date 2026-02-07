@@ -1,6 +1,6 @@
 # BurnWatch – STATE (end of Milestone 02)
 
-Este documento resume o estado atual da base de código após a implementação do **Milestone 02: Organization Invitation System (Magic Links)** e ajustes de UI (RBAC, tema light/dark, shadcn, **i18n pt/en/es** com troca instantânea). Serve como contexto inicial para outras AIs (ex.: Gemini) continuarem o trabalho.
+Este documento resume o estado atual da base de código após a implementação do **Milestone 02: Organization Invitation System (Magic Links)** e ajustes de UI (RBAC, tema light/dark, shadcn, **i18n pt/en/es** com troca instantânea), além do **polimento do produto público**: landing page na root, login em `/login`, i18n e copy transcultural na landing, favicon e logo. Serve como contexto inicial para outras AIs (ex.: Gemini) continuarem o trabalho.
 
 ---
 
@@ -151,31 +151,18 @@ Arquivo: `src/lib/supabase/server.ts`
 
 ## 6. Fluxo de Autenticação (Magic Link + GitHub)
 
-### Tela de login / signup por email
+### Landing page (root) e login
 
-Arquivo: `src/app/page.tsx` (Client Component)
+- **Root (`/`):** Landing page em `src/app/page.tsx` (Server) que renderiza `LandingContent` (Client). Conteúdo traduzido (namespace `Landing` em pt/en/es), preços por idioma (pt → R$ 97 / R$ 197; en/es → $49 / $149), tema light/dark e idioma com botões flutuantes (`LandingThemeToggle`, `LandingLocaleToggle`). Scroll suave para âncoras (#features, #security, #alerts, #how-it-works, #pricing). Nav na ordem lógica da página; copy de pricing transcultural (BR: “Pague em Reais, monitore em Dólares”; EN: “Predictable Growth. Scalable Control.”; ES: “Crecimiento previsible. Control total.”).
+- **Login (`/login`):** Formulário de magic link + GitHub em `src/app/login/page.tsx` (Client Component).
 
-- UI minimalista dark, infra‑vibe.
-- Campos e estados:
-  - `email: string`
-  - `status: "idle" | "loading" | "success" | "error"`
-  - `errorMessage: string | null`
-- Ação principal – magic link:
-  - Função `handleSubmit` chama:
-    ```ts
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
-    });
-    ```
-  - Mostra:
-    - loading: `"Sending magic link..."`;
-    - sucesso: `"Magic link sent. Check your inbox to continue."`;
-    - erro genérico ou de rate limit (ex.: `"email rate limit exceeded"`).
+- UI minimalista dark, infra‑vibe; textos via i18n (Auth).
+- Campos e estados: `email`, `status` (idle/loading/success/error), `errorMessage`.
+- Magic link: `signInWithOtp` com `emailRedirectTo` para `/auth/callback`; feedback loading/sucesso/erro.
 
 ### Login com GitHub
 
-Ainda na `src/app/page.tsx`:
+Em `src/app/login/page.tsx`:
 
 - Botão “**Continue with GitHub**” que chama:
   ```ts
@@ -215,7 +202,7 @@ Arquivo: `src/app/onboarding/page.tsx`
 
 ### Dashboard e layout
 
-- **Layout:** `src/app/dashboard/layout.tsx` – Server Component que chama `getSessionProfile()` (redireciona para `/` se não autenticado, para `/onboarding` se sem profile). Renderiza `SidebarProvider` e `DashboardShell` (nome da org, role, theme/locale para header).
+- **Layout:** `src/app/dashboard/layout.tsx` – Server Component que chama `getSessionProfile()` (redireciona para `/login` se não autenticado, para `/onboarding` se sem profile). Renderiza `SidebarProvider` e `DashboardShell` (nome da org, role, theme/locale para header).
 - **Sidebar:** shadcn `Sidebar` com `AppSidebar` (Dashboard, Members, Settings); colapsável; ícones e tooltips.
 - **Header:** `SidebarTrigger` + no canto direito `ThemeToggle` (Light/Dark/System) e `LocaleSwitcher` (PT/EN/ES). Tema e idioma são salvos no perfil via `PATCH /api/profile`; ao carregar o dashboard, `PreferencesSync` aplica `profile.theme` uma vez (next-themes). Troca de idioma é **instantânea na UI** (sem refresh); persistência no perfil em background.
 - **Página dashboard:** `src/app/dashboard/page.tsx` (Client Component) – placeholder com textos via i18n; futuramente gasto e projeções.
@@ -232,21 +219,27 @@ Arquivo: `src/app/onboarding/page.tsx`
 
 ### Tema (light/dark) e preferências
 
-- **next-themes** no layout raiz (`ThemeProvider` com `attribute="class"`, `defaultTheme="system"`).
+- **next-themes** no layout raiz (`ThemeProvider` com `attribute="class"`, `defaultTheme="dark"`).
 - Tema e locale em `Profile.theme` e `Profile.locale`; PreferencesSync aplica tema ao carregar.
 - **Regra de UI:** `.cursor/rules/shadcn-ui.mdc` – usar shadcn; variáveis de tema para light/dark.
+- **Landing:** botões flutuantes para tema (`LandingThemeToggle`) e idioma (`LandingLocaleToggle`); sem persistência em perfil (só UX local).
 
 ### i18n (next-intl, pt / en / es)
 
-- **Biblioteca:** next-intl; locale via cookie `NEXT_LOCALE` (definido em auth/complete, onboarding/complete e PATCH /api/profile).
-- **Config:** `src/i18n/request.ts` – `getRequestConfig` lê o cookie e carrega `messages/{locale}.json`; `src/i18n/locales.ts` – tipo `Locale`, `isValidLocale`, locales pt/en/es.
-- **Mensagens:** `messages/pt.json`, `messages/en.json`, `messages/es.json` (chaves por namespace: Auth, Callback, Onboarding, Dashboard, Members, Invite, RemoveMember, ResendInvite, Settings, ProfileEdit, Sidebar, Theme, Locale, Roles, Common).
-- **Troca instantânea:** `LocaleOverrideProvider` (client) mantém override de locale + cache de mensagens; ao selecionar idioma no `LocaleSwitcher`, a UI atualiza na hora (client components com `useTranslations()`); persistência no perfil em background (sem `router.refresh()`). `GET /api/messages/[locale]` serve os JSONs para o client. Páginas de dashboard (placeholder), membros e settings usam client views que consomem traduções para evitar “dois tempos” na troca de idioma.
+- **Biblioteca:** next-intl; locale via cookie `NEXT_LOCALE` (definido em auth/complete, onboarding/complete, PATCH /api/profile e no `LandingLocaleToggle`).
+- **Config:** `src/i18n/request.ts` – `getRequestConfig` lê o cookie e, se ausente/inválido, usa `Accept-Language` (função `getPreferredLocaleFromHeader` em `src/i18n/locales.ts`) para primeira carga; `src/i18n/locales.ts` – tipo `Locale`, `isValidLocale`, `getPreferredLocaleFromHeader`, locales pt/en/es.
+- **Mensagens:** `messages/pt.json`, `messages/en.json`, `messages/es.json` (namespaces: Auth, Callback, Onboarding, Dashboard, Members, Invite, RemoveMember, ResendInvite, Settings, ProfileEdit, Sidebar, Theme, Locale, Roles, Common, **Landing**).
+- **Landing:** namespace `Landing` com toda a copy da landing (hero, nav, features, security, alerts, how-it-works, collaboration, pricing, footer); preços por idioma (pt → R$ 97 / R$ 197; en/es → $49 / $149); copy de pricing transcultural (título/subtítulo/CTA por locale).
+- **Troca instantânea:** `LocaleOverrideProvider` (client) mantém override de locale + cache de mensagens; ao selecionar idioma no `LocaleSwitcher` (dashboard) ou `LandingLocaleToggle` (landing), a UI atualiza na hora; persistência no perfil em background no dashboard; na landing só cookie `NEXT_LOCALE`. `GET /api/messages/[locale]` serve os JSONs para o client.
+
 - **Alias:** `@messages/*` em `tsconfig.json` para importar os JSONs na API.
 
 ### Middleware e resiliência
 
-- **Middleware** (`src/middleware.ts`): matcher `["/"]`. Se usuário autenticado (Supabase `getUser`) acessa `/`, redireciona para `/dashboard`. Try/catch e timeout (~4s) para não travar se Supabase estiver lento ou inacessível.
+- **Middleware** (`src/middleware.ts`): matcher `['/((?!api|_next|.*\\..*).*)']` (todas as rotas de página).
+  - **Locale:** define cookie `NEXT_LOCALE` a partir de `Accept-Language` quando o cookie não existe ou é inválido (`getPreferredLocaleFromHeader` de `@/i18n/locales`).
+  - **Mercado:** define cookie `bw_market` a partir do header `x-vercel-ip-country` (BR para Brasil, INTL para demais); disponível para uso futuro (ex.: ofertas por região).
+  - **Auth:** em `/login`, se o usuário já estiver autenticado (Supabase `getUser`), redireciona para `/dashboard`; try/catch e timeout (~4s) para não travar se Supabase estiver lento.
 - **safe-fetch:** `src/lib/safe-fetch.ts` – `fetchWithRetry()` com retry em erros de rede; usado nas chamadas de API do cliente.
 - **Supabase server:** `setAll` de cookies em try/catch para não quebrar em Server Components (Next só permite setar cookies em Route Handlers / Server Actions).
 
@@ -378,8 +371,14 @@ Comparado à descrição em `docs/sprints/SPRINT_01.md` (Milestone 2), o que foi
   - Sidebar shadcn; regra `shadcn-ui.mdc`; páginas com classes de tema para light/dark.
 - **Dashboard (card de anomalia)**
   - Card de alerta de anomalia em `src/app/dashboard/page.tsx` com contraste adequado no light mode (fundo/borda e texto; dark mode mantido).
+- **Landing e produto público (polimento Milestone 02)**
+  - **Rotas:** landing na root (`/`), login em `/login`; middleware redireciona usuário logado de `/login` para `/dashboard`.
+  - **Logo e favicon:** `BurnWatchLogo` em `src/components/burnwatch-logo.tsx`; favicon gerado em `src/app/icon.tsx` (ImageResponse com logo laranja + Zap).
+  - **Landing i18n:** conteúdo em `LandingContent` (Client) com `useTranslations('Landing')`; namespace `Landing` em pt/en/es; botões flutuantes de tema e idioma (`LandingThemeToggle`, `LandingLocaleToggle`); preços por locale (pt: R$ 97 / R$ 197; en/es: $49 / $149).
+  - **Copy transcultural:** título/subtítulo/CTA de pricing por idioma (BR: “Pague em Reais, monitore em Dólares” + “Começar em Reais”; EN: “Predictable Growth. Scalable Control.” + “Start Scaling”; ES: “Crecimiento previsible. Control total.” + “Empezar ahora”).
+  - **UX:** scroll suave para âncoras (`scroll-behavior: smooth` em `globals.css`); nav na ordem da página (Features, Security, Alerts, Integration, Pricing); tema padrão dark (`defaultTheme="dark"` no ThemeProvider).
 - **Resiliência**
   - Middleware com try/catch e timeout; Supabase server `setAll` em try/catch; `fetchWithRetry` no cliente; `setLocaleCookie` em auth/complete, onboarding/complete e PATCH profile.
 
-Em resumo: **convites por magic link, onboarding, gestão de membros, preferências de tema/idioma (pt, en, es) com troca instantânea e UI adaptada ao tema** estão prontos. Próximos passos (Milestone 3+): adapters de cloud, sync, dashboard com dados de gasto.
+Em resumo: **convites por magic link, onboarding, gestão de membros, preferências de tema/idioma (pt, en, es) com troca instantânea, UI adaptada ao tema, landing pública i18n com copy transcultural e preços por idioma** estão prontos. Próximos passos (Milestone 3+): adapters de cloud, sync, dashboard com dados de gasto.
 
