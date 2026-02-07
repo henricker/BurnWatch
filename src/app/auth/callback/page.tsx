@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { Zap, Loader2, CheckCircle2 } from "lucide-react";
 
 import { fetchWithRetry } from "@/lib/safe-fetch";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -10,6 +11,47 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 type CallbackStatus = "verifying" | "success" | "error";
 
 const supabase = createSupabaseBrowserClient();
+
+function CallbackLayout({
+  children,
+  showBranding = true,
+}: {
+  children: React.ReactNode;
+  showBranding?: boolean;
+}) {
+  const tAuth = useTranslations("Auth");
+  return (
+    <div className="relative flex min-h-screen max-h-screen min-w-0 flex-col items-center justify-center overflow-hidden bg-slate-50 px-4 py-4 text-slate-900 transition-colors duration-500 dark:bg-[#050505] dark:text-[#f5f5f5]">
+      {/* Background: grid */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.04] dark:opacity-[0.08]"
+        style={{
+          backgroundImage: "radial-gradient(#64748b 1px, transparent 1px)",
+          backgroundSize: "32px 32px",
+        }}
+      />
+      {/* Background: orange glow */}
+      <div className="pointer-events-none absolute left-1/2 top-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-orange-500/10 blur-[100px]" />
+
+      <div className="z-10 w-full max-w-[380px] shrink-0">
+        {showBranding && (
+          <div className="mb-4 flex flex-col items-center text-center">
+            <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-orange-500 text-white shadow-[0_0_24px_rgba(249,115,22,0.25)]">
+              <Zap size={22} className="fill-white" />
+            </div>
+            <h1 className="text-2xl font-extrabold tracking-tighter text-slate-900 dark:text-white">
+              BurnWatch
+            </h1>
+            <p className="mt-1 text-[9px] font-bold uppercase tracking-[0.35em] text-slate-500 dark:text-zinc-500">
+              {tAuth("tagline")}
+            </p>
+          </div>
+        )}
+        {children}
+      </div>
+    </div>
+  );
+}
 
 function AuthCallbackContent() {
   const t = useTranslations("Callback");
@@ -21,10 +63,13 @@ function AuthCallbackContent() {
   useEffect(() => {
     async function confirmSession() {
       try {
-        // Supabase may redirect with error params when the magic link expired or was already used.
         const errorCode = searchParams.get("error_code");
         const errorDesc = searchParams.get("error_description");
-        if (errorCode === "otp_expired" || (searchParams.get("error") === "access_denied" && errorDesc?.includes("expired"))) {
+        if (
+          errorCode === "otp_expired" ||
+          (searchParams.get("error") === "access_denied" &&
+            errorDesc?.includes("expired"))
+        ) {
           setStatus("error");
           setMessage(t("linkExpired"));
           return;
@@ -32,19 +77,19 @@ function AuthCallbackContent() {
 
         await supabase.auth.initialize();
 
-        // If redirect has ?code=... (PKCE), exchange it.
         const code = searchParams.get("code");
         if (code) {
-          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          const { error: exchangeError } =
+            await supabase.auth.exchangeCodeForSession(code);
           if (exchangeError) {
             setStatus("error");
             setMessage(exchangeError.message ?? t("noSession"));
             return;
           }
         } else if (typeof window !== "undefined" && window.location.hash) {
-          // Implicit flow: tokens are in the fragment (#access_token=...&refresh_token=...).
-          // Parse and set session explicitly so it's stored (cookies) and getSession() returns it.
-          const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+          const params = new URLSearchParams(
+            window.location.hash.replace(/^#/, ""),
+          );
           const access_token = params.get("access_token");
           const refresh_token = params.get("refresh_token");
           if (access_token && refresh_token) {
@@ -67,8 +112,6 @@ function AuthCallbackContent() {
           return;
         }
 
-        // Send the session token so the server can complete auth (invite application, etc.).
-        // The server may not have the session in cookies yet when coming from a magic link.
         const response = await fetchWithRetry("/api/auth/complete", {
           headers: {
             Authorization: `Bearer ${data.session.access_token}`,
@@ -86,15 +129,14 @@ function AuthCallbackContent() {
         setStatus("success");
         setMessage(t("signedInRedirecting"));
 
-        // Full page redirect so the next request (dashboard/onboarding) receives
-        // the session cookies set by the Supabase client.
         setTimeout(() => {
           window.location.replace(dataJson.next);
         }, 1200);
       } catch (error: unknown) {
         setStatus("error");
         const isNetwork =
-          error instanceof TypeError && (error as Error).message?.includes("fetch");
+          error instanceof TypeError &&
+          (error as Error).message?.includes("fetch");
         setMessage(
           isNetwork
             ? t("networkError")
@@ -109,28 +151,72 @@ function AuthCallbackContent() {
   }, [router, searchParams]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-950 px-4 text-zinc-50">
-      <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900/80 p-8 shadow-xl">
-        <div className="space-y-3">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {t("title")}
-          </h1>
-          <p className="text-sm text-zinc-400">{message}</p>
-        </div>
+    <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl transition-colors duration-500 dark:border-[#1a1a1a] dark:bg-[#0a0a0a]">
+      <div className="absolute left-0 right-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-orange-500 to-transparent opacity-40" />
+      <div className="p-6">
+        {status === "success" ? (
+          <div className="flex flex-col items-center py-2 text-center">
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-green-500/20 bg-green-500/10 text-green-500 shadow-[0_0_16px_rgba(34,197,94,0.1)]">
+              <CheckCircle2 size={28} />
+            </div>
+            <h2 className="mb-1 text-lg font-bold tracking-tight">
+              {t("title")}
+            </h2>
+            <p className="text-sm text-slate-500 dark:text-zinc-400">
+              {message}
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="space-y-2">
+              <h2 className="text-xl font-bold tracking-tight">
+                {t("title")}
+              </h2>
+              <p className="text-sm text-slate-500 dark:text-zinc-400">
+                {message}
+              </p>
+            </div>
 
-        {status === "verifying" && (
-          <div className="mt-6 h-8 w-8 animate-spin rounded-full border-2 border-zinc-600 border-t-zinc-100" />
-        )}
+            {status === "verifying" && (
+              <div className="mt-6 flex justify-center">
+                <Loader2
+                  size={28}
+                  className="animate-spin text-orange-500"
+                  aria-hidden
+                />
+              </div>
+            )}
 
-        {status === "error" && (
-          <button
-            type="button"
-            onClick={() => router.replace("/login")}
-            className="mt-6 flex w-full items-center justify-center rounded-md bg-zinc-100 px-3 py-2 text-sm font-medium text-zinc-900 transition hover:bg-white"
-          >
-            {t("backToSignIn")}
-          </button>
+            {status === "error" && (
+              <button
+                type="button"
+                onClick={() => router.replace("/login")}
+                className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-orange-500 py-3 text-[10px] font-bold uppercase tracking-[0.18em] text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-orange-600 active:scale-[0.98]"
+              >
+                {t("backToSignIn")}
+              </button>
+            )}
+          </>
         )}
+      </div>
+    </div>
+  );
+}
+
+function CallbackFallback() {
+  const t = useTranslations("Callback");
+  return (
+    <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl dark:border-[#1a1a1a] dark:bg-[#0a0a0a]">
+      <div className="absolute left-0 right-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-orange-500 to-transparent opacity-40" />
+      <div className="flex flex-col items-center justify-center gap-4 p-8">
+        <Loader2
+          size={32}
+          className="animate-spin text-orange-500"
+          aria-hidden
+        />
+        <p className="text-sm text-slate-500 dark:text-zinc-400">
+          {t("confirmingSession")}
+        </p>
       </div>
     </div>
   );
@@ -140,13 +226,14 @@ export default function AuthCallbackPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-zinc-950 px-4 text-zinc-50">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-600 border-t-zinc-100" />
-        </div>
+        <CallbackLayout>
+          <CallbackFallback />
+        </CallbackLayout>
       }
     >
-      <AuthCallbackContent />
+      <CallbackLayout>
+        <AuthCallbackContent />
+      </CallbackLayout>
     </Suspense>
   );
 }
-
