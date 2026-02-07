@@ -117,6 +117,37 @@
   --sidebar-ring: 24.6 95% 53%;
 }
 
+/* Landing: grid de fundo que respeita tema (default light, .dark override) */
+.landing-bg-grid {
+  background-size: 32px 32px;
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    rgb(228 228 231) 1px,
+    transparent 0
+  );
+}
+.dark .landing-bg-grid {
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    #1a1a1a 1px,
+    transparent 0
+  );
+}
+
+/* Botão flutuante de tema na landing */
+@keyframes landing-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+.landing-theme-toggle {
+  animation: landing-float 4s ease-in-out infinite;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
