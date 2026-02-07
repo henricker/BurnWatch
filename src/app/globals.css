@@ -144,7 +144,8 @@
     transform: translateY(-6px);
   }
 }
-.landing-theme-toggle {
+.landing-theme-toggle,
+.landing-locale-toggle {
   animation: landing-float 4s ease-in-out infinite;
 }
 
