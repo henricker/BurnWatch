@@ -1,17 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type { Role } from "@prisma/client";
-import {
-  LayoutDashboard,
-  Users,
-  Settings,
-} from "lucide-react";
+import { LayoutDashboard, LogOut, Users, Settings } from "lucide-react";
+
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -31,7 +30,14 @@ export function AppSidebar({
   const t = useTranslations("Sidebar");
   const tRoles = useTranslations("Roles");
   const pathname = usePathname();
+  const router = useRouter();
   const roleLabel = tRoles(profileRole);
+
+  async function handleLogout() {
+    const supabase = createSupabaseBrowserClient();
+    await supabase.auth.signOut();
+    router.replace("/");
+  }
 
   const navItems = [
     { href: "/dashboard", labelKey: "dashboard" as const, icon: LayoutDashboard },
@@ -75,6 +81,16 @@ export function AppSidebar({
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter className="mt-auto flex justify-center border-t border-sidebar-border">
+        <SidebarMenuButton
+          onClick={() => void handleLogout()}
+          tooltip={t("logout")}
+          className="w-full justify-center"
+        >
+          <LogOut className="size-4 shrink-0" />
+          <span>{t("logout")}</span>
+        </SidebarMenuButton>
+      </SidebarFooter>
     </Sidebar>
   );
 }

@@ -2,12 +2,20 @@
   "Auth": {
     "title": "Iniciar sesión en BurnWatch",
     "subtitle": "Introduce tu correo y te enviaremos un enlace mágico. Sin contraseñas, solo acceso seguro a tu espacio de trabajo.",
+    "tagline": "Inteligencia Financiera Cloud",
     "workEmail": "Correo laboral",
     "emailPlaceholder": "tu@empresa.com",
     "sendingMagicLink": "Enviando enlace mágico...",
-    "sendMagicLink": "Enviar enlace mágico",
+    "sendMagicLink": "Recibir enlace mágico",
     "continueWithGithub": "Continuar con GitHub",
     "magicLinkSent": "Enlace mágico enviado. Revisa tu bandeja de entrada para continuar.",
+    "linkSentTitle": "¡Enlace enviado!",
+    "linkSentDescription": "Enviamos el acceso seguro a tu correo corporativo:",
+    "useAnotherEmail": "Usar otra dirección",
+    "orContinueWith": "O continúa con",
+    "accessWorkspace": "Identifícate para acceder a tu workspace",
+    "backToLanding": "Landing Page",
+    "multiCloudActive": "Monitorización Multi-Cloud Activa",
     "disclaimer": "Al iniciar sesión, aceptas mantener tus credenciales de nube seguras. BurnWatch solo usará acceso de solo lectura para monitorear el gasto por ti.",
     "emailRequired": "El correo es obligatorio.",
     "unexpectedError": "Error inesperado."
@@ -166,7 +174,8 @@
     "navigation": "Navegación",
     "dashboard": "Panel",
     "members": "Miembros",
-    "settings": "Configuración"
+    "settings": "Configuración",
+    "logout": "Salir"
   },
   "Theme": {
     "label": "Tema",

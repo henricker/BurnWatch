@@ -114,9 +114,12 @@ export function LandingContent() {
                   className="h-12 w-full rounded border border-zinc-200 bg-zinc-100 pl-10 pr-4 text-sm text-zinc-900 outline-none transition-all focus:border-orange-500/50 dark:border-[#1a1a1a] dark:bg-[#0a0a0a] dark:text-white"
                 />
               </div>
-              <button className="glow-orange-small flex h-12 items-center justify-center gap-2 rounded bg-[#f97316] px-6 text-[10px] font-bold uppercase tracking-widest text-white transition-all hover:bg-[#ea580c]">
+              <Link
+                href="/login"
+                className="glow-orange-small flex h-12 items-center justify-center gap-2 rounded bg-[#f97316] px-6 text-[10px] font-bold uppercase tracking-widest text-white transition-all hover:bg-[#ea580c]"
+              >
                 {t("ctaInstant")} <ArrowRight size={14} />
-              </button>
+              </Link>
             </div>
             <div className="mt-12 flex items-center justify-center gap-10 opacity-40 transition-opacity hover:opacity-100 lg:justify-start">
               <div className="flex items-center gap-2 font-mono text-sm uppercase tracking-tighter">
@@ -331,9 +334,12 @@ export function LandingContent() {
             <p className="mb-10 text-xl leading-relaxed text-zinc-600 dark:text-zinc-400">
               {t("collabSubtitle")}
             </p>
-            <button className="mx-auto flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-orange-500 transition-all hover:gap-4 lg:mx-0">
+            <Link
+              href="/login"
+              className="mx-auto flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-orange-500 transition-all hover:gap-4 lg:mx-0"
+            >
               {t("collabCta")} <ArrowRight size={16} />
-            </button>
+            </Link>
           </div>
         </div>
       </section>
@@ -376,9 +382,12 @@ export function LandingContent() {
                   <Check size={16} className="text-[#f97316]" /> {t("starterFeature4")}
                 </li>
               </ul>
-              <button className="w-full rounded border border-zinc-200 border-dashed py-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500 transition-all hover:bg-zinc-100 hover:text-zinc-900 dark:border-[#1a1a1a] dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-white">
+              <Link
+                href="/login"
+                className="flex w-full justify-center rounded border border-zinc-200 border-dashed py-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500 transition-all hover:bg-zinc-100 hover:text-zinc-900 dark:border-[#1a1a1a] dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-white"
+              >
                 {t("selectStarter")}
-              </button>
+              </Link>
             </div>
 
             <div className="relative flex flex-col rounded-2xl border border-orange-500/30 bg-white p-10 shadow-[0_0_50px_rgba(249,115,22,0.08)] dark:bg-[#0a0a0a]">
@@ -410,9 +419,12 @@ export function LandingContent() {
                   <Check size={16} className="text-[#f97316]" /> {t("proFeature4")}
                 </li>
               </ul>
-              <button className="glow-orange-small w-full rounded bg-[#f97316] py-4 text-[10px] font-bold uppercase tracking-widest text-white transition-all hover:bg-[#ea580c]">
+              <Link
+                href="/login"
+                className="glow-orange-small flex w-full justify-center rounded bg-[#f97316] py-4 text-[10px] font-bold uppercase tracking-widest text-white transition-all hover:bg-[#ea580c]"
+              >
                 {t("selectPro")}
-              </button>
+              </Link>
             </div>
           </div>
           <p className="mt-16 text-center text-[9px] font-mono uppercase tracking-widest text-zinc-500 opacity-60 dark:text-zinc-600">
