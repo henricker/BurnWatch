@@ -48,13 +48,14 @@ Identify "Zombies"—forgotten instances, idle GPUs, and orphaned storage volume
 
 ## 📍 Current Status (Sprint 01)
 
-**Done:** Milestone 1 (Auth & multi-tenancy) and **Milestone 2 (Organization & member system)** are complete and functional:
+**Done:** Milestones 1–4 are complete and functional:
 
-- Magic link + GitHub auth, onboarding, organization invites, RBAC (Owner / Admin / Member).
-- Team management (members, pending invites), Settings (profile, org name, delete org with confirmation).
-- i18n (PT, EN, ES) with instant locale switch; light/dark theme; landing page with transcultural copy and pricing.
+- **M1 – Auth & multi-tenancy:** Magic link + GitHub, Supabase + Prisma, RLS.
+- **M2 – Organization & members:** Onboarding, invites, RBAC (Owner/Admin/Member), Settings (profile, org name, delete org), i18n (PT, EN, ES), light/dark theme, landing with transcultural copy and pricing.
+- **M3 – Credential Management UI:** `/dashboard/connections` with CRUD for Vercel, AWS, GCP; credentials encrypted at rest (AES-256-GCM); per-account status, Sync Health, rename/delete with confirmation.
+- **M4 – Adapter Engine (Vercel):** Real ingestion via Vercel Billing API; SyncService with day-by-day backfill and bulk upsert per day (~73s → ~35s); 403/token error handling with translated tooltips; unified loading state when creating a connection or triggering sync.
 
-**Next:** **Milestone 3 – Credential Management UI (CRUD):** connection screens for Vercel, AWS, GCP; encrypt tokens on save; status “Connected” and rename/remove accounts.
+**Next:** **Milestone 5 – The "Aha!" Dashboard:** wire DailySpend to charts, end-of-month projection (linear regression), anomaly flag, and polish.
 
 See `docs/sprints/SPRINT_01.md` for the full sprint plan and `docs/STATE.md` for technical context and env setup.
 
