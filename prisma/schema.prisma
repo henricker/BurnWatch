@@ -73,6 +73,8 @@ model CloudAccount {
   organizationId String       @db.Uuid @map("organization_id")
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
+  dailySpends DailySpend[]
+
   provider CloudProvider
 
   /// Human readable name for this account (e.g. "Prod AWS")
@@ -107,6 +109,9 @@ model DailySpend {
   organizationId String       @db.Uuid @map("organization_id")
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
+  cloudAccountId String      @db.Uuid @map("cloud_account_id")
+  cloudAccount   CloudAccount @relation(fields: [cloudAccountId], references: [id], onDelete: Cascade)
+
   /// Date of the spend (UTC date, no time component).
   date DateTime @map("date")
 
@@ -125,8 +130,8 @@ model DailySpend {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  /// Composite unique index to guarantee idempotent syncs.
-  @@unique([organizationId, provider, serviceName, date], name: "daily_spend_org_provider_service_date_unique")
+  /// Composite unique index to guarantee idempotent syncs per account.
+  @@unique([organizationId, cloudAccountId, provider, serviceName, date], name: "daily_spend_org_provider_service_date_account_unique")
 
   @@index([organizationId, date], name: "daily_spend_org_date_idx")
   @@map("daily_spend")

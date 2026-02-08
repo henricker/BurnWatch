@@ -10,8 +10,8 @@ const AWS_ACCESS_KEY_ID_REGEX = /^AKIA[0-9A-Za-z]{16}$/;
 /** AWS Secret Access Key: 40 chars (base64-like) */
 const AWS_SECRET_LENGTH = 40;
 
-/** Vercel token: non-empty, reasonable length (e.g. v_tok_... or vercel_...) */
-const VERCEL_TOKEN_MIN_LENGTH = 20;
+/** Vercel token: non-empty, reasonable length. Formats: v_tok_..., vercel_..., or plain alphanumeric (e.g. R1O1lKO7v8L0svh4dTbw6pfu) */
+const VERCEL_TOKEN_MIN_LENGTH = 16;
 
 /** GCP Billing Account ID: e.g. 012345-ABCDEF (6 digits - 6-8 alphanumeric) */
 const GCP_BILLING_ID_REGEX = /^\d{6}-[0-9A-Z]{6,8}$/i;
@@ -47,7 +47,7 @@ export function validateVercelCredentials(token: string): ValidationResult {
   if (t.length < VERCEL_TOKEN_MIN_LENGTH) {
     return {
       ok: false,
-      error: "API token seems too short (expected at least 20 characters)",
+      error: `API token seems too short (expected at least ${VERCEL_TOKEN_MIN_LENGTH} characters)`,
     };
   }
   return { ok: true };

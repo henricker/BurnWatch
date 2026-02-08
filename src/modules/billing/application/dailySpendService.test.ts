@@ -18,6 +18,7 @@ describe("upsertDailySpend", () => {
 
     const input = {
       organizationId: "org-123",
+      cloudAccountId: "cloud-acc-456",
       date: new Date("2025-01-01"),
       provider: "AWS" as CloudProvider,
       serviceName: "Lambda",
@@ -34,8 +35,9 @@ describe("upsertDailySpend", () => {
 
     expect(firstCallArgs).toMatchObject({
       where: {
-        daily_spend_org_provider_service_date_unique: {
+        daily_spend_org_provider_service_date_account_unique: {
           organizationId: input.organizationId,
+          cloudAccountId: input.cloudAccountId,
           provider: input.provider,
           serviceName: input.serviceName,
           date: input.date,

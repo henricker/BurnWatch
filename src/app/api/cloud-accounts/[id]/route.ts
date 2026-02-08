@@ -2,14 +2,15 @@ import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { EncryptionService } from "@/lib/security/encryption";
 import {
   updateLabel,
-  syncAccount,
   deleteAccount,
   CloudCredentialsNotFoundError,
   CloudCredentialsValidationError,
   CloudCredentialsError,
 } from "@/modules/cloud-provider-credentials/application/cloudCredentialsService";
+import { syncAccount as syncAccountAdapter, SyncNotFoundError } from "@/modules/adapter-engine/application/syncService";
 import { getProfileByUserId } from "@/modules/organizations/application/profileService";
 
 /**
@@ -62,7 +63,8 @@ export async function PATCH(
 }
 
 /**
- * POST: Record a sync (updates lastSyncedAt). Mock; real sync can be added later.
+ * POST: Run sync for this cloud account (Vercel: real API; AWS/GCP: mock).
+ * Updates status to SYNCING, fetches data, upserts DailySpend, then SYNCED or SYNC_ERROR.
  */
 export async function POST(
   _request: Request,
@@ -84,14 +86,36 @@ export async function POST(
     return NextResponse.json({ error: "Profile not found" }, { status: 404 });
   }
 
+  let encryption: EncryptionService;
   try {
-    const result = await syncAccount(prisma, profile.organizationId, accountId);
+    encryption = EncryptionService.fromEnv();
+  } catch (e) {
+    if (process.env.NODE_ENV !== "test") {
+      console.error("[POST /api/cloud-accounts/[id]] EncryptionService:", e);
+    }
+    return NextResponse.json(
+      { error: "Server encryption not configured" },
+      { status: 500 },
+    );
+  }
+
+  try {
+    const result = await syncAccountAdapter(prisma, encryption, {
+      organizationId: profile.organizationId,
+      accountId,
+    });
     return NextResponse.json(result);
   } catch (err) {
-    if (err instanceof CloudCredentialsNotFoundError) {
+    if (err instanceof SyncNotFoundError) {
       return NextResponse.json({ error: "Cloud account not found" }, { status: 404 });
     }
-    throw err;
+    if (process.env.NODE_ENV !== "test") {
+      console.error("[POST /api/cloud-accounts/[id]] sync error:", err);
+    }
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Sync failed" },
+      { status: 500 },
+    );
   }
 }
 
