@@ -48,14 +48,15 @@ Identify "Zombies"—forgotten instances, idle GPUs, and orphaned storage volume
 
 ## 📍 Current Status (Sprint 01)
 
-**Done:** Milestones 1–4 are complete and functional:
+**Done:** Milestones 1–5 are complete and functional:
 
 - **M1 – Auth & multi-tenancy:** Magic link + GitHub, Supabase + Prisma, RLS.
 - **M2 – Organization & members:** Onboarding, invites, RBAC (Owner/Admin/Member), Settings (profile, org name, delete org), i18n (PT, EN, ES), light/dark theme, landing with transcultural copy and pricing.
 - **M3 – Credential Management UI:** `/dashboard/connections` with CRUD for Vercel, AWS, GCP; credentials encrypted at rest (AES-256-GCM); per-account status, Sync Health, rename/delete with confirmation.
 - **M4 – Adapter Engine (Vercel):** Real ingestion via Vercel Billing API; SyncService with day-by-day backfill and bulk upsert per day (~73s → ~35s); 403/token error handling with translated tooltips; unified loading state when creating a connection or triggering sync.
+- **M5 – The "Aha!" Dashboard:** Analytics module (`getDashboardAnalytics`) with date ranges (7D, 30D, MTD) and provider filter; `GET /api/analytics`; cost evolution chart (multiple lines per provider when "All"), metric cards (total, forecast, daily burn, status), Resource Breakdown, Spend by Category (Observability & Automation); end-of-month projection (MTD), Z-score anomaly detection; full i18n and unit tests for analytics.
 
-**Next:** **Milestone 5 – The "Aha!" Dashboard:** wire DailySpend to charts, end-of-month projection (linear regression), anomaly flag, and polish.
+**Next:** **Sprint 02 – Business & Growth:** Notification Engine (Discord & Slack), Stripe integration (BRL R$ 97/197, USD $49/$149).
 
 See `docs/sprints/SPRINT_01.md` for the full sprint plan and `docs/STATE.md` for technical context and env setup.
 

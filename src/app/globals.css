@@ -164,3 +164,34 @@
     @apply cursor-pointer;
   }
 }
+
+/* Scroll discreto: invisível por padrão, aparece ao passar o mouse no componente (parent .group) */
+.scrollbar-hover-visible {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.scrollbar-hover-visible::-webkit-scrollbar {
+  width: 6px;
+}
+.scrollbar-hover-visible::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-hover-visible::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 3px;
+}
+.scrollbar-hover-visible::-webkit-scrollbar-thumb:hover {
+  background: transparent;
+}
+.group:hover .scrollbar-hover-visible,
+.group:focus-within .scrollbar-hover-visible {
+  scrollbar-color: hsl(var(--muted-foreground) / 0.4) transparent;
+}
+.group:hover .scrollbar-hover-visible::-webkit-scrollbar-thumb,
+.group:focus-within .scrollbar-hover-visible::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.35);
+}
+.group:hover .scrollbar-hover-visible::-webkit-scrollbar-thumb:hover,
+.group:focus-within .scrollbar-hover-visible::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}

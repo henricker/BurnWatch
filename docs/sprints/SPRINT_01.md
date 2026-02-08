@@ -64,16 +64,19 @@ Construir a "Steel Thread" técnica do BurnWatch: desde a autenticação e gest�
 
 ---
 
-## 📊 Milestone 5: The "Aha!" Dashboard
+## ✅ Milestone 5: The "Aha!" Dashboard
+
+**Status:** Concluído
 
 **Objetivo:** Visualização final dos dados e projeção financeira para o utilizador.
 
-### Requisitos Técnicos
+### Entregues
 
-- **Dashboard Wiring:** Ligar o banco de dados real de DailySpend aos gráficos de Recharts.
-- **Intelligence:** Implementar o cálculo de projeção (Fim de Mês) usando regressão linear simples.
-- **Anomaly Detection:** Flag visual se o gasto de hoje for muito superior à média dos últimos 7 dias.
-- **Polimento Final:** Garantir que a "Vibe de Infra" está impecável com dados reais fluindo.
+- **Módulo Analytics:** `src/modules/analytics` com `getDashboardAnalytics(prisma, input)` – agregação de DailySpend por intervalo (7D, 30D, MTD) e filtro de provedor (ALL, VERCEL, AWS, GCP); totais, tendência vs período anterior, projeção fim do mês (MTD), consumo diário médio (últimos 7 dias), deteção de anomalia (Z-score: dia > média + 2×desvio nos últimos 7); `resolveDateRange(range, now)` para períodos consistentes.
+- **Evolution & Breakdown:** Evolução diária por provedor (aws, vercel, gcp por dia) para gráfico; resource breakdown por provedor com serviços ordenados por custo; spend by category com mapeamento universal (`serviceNameToCategory`) – categorias Compute, Network, Database, Storage, **Observability**, **Automation**, Other; mapa explícito Vercel (Serverless/Edge Functions → Compute, Bandwidth/Image Optimization/Log Drains → Network, Postgres/KV → Database, Blob → Storage, Web Analytics → Observability, Cron Jobs → Automation).
+- **API:** `GET /api/analytics?dateRange=7D|30D|MTD&providerFilter=ALL|VERCEL|AWS|GCP` devolve totalCents, trendPercent, forecastCents (só MTD), dailyBurnCents, anomalies, evolution, providerBreakdown, categories.
+- **Dashboard UI:** `src/app/dashboard/page.tsx` – gráfico de evolução de custos (múltiplas linhas por provedor quando "All", cores por AWS/Vercel/GCP), cards de métricas (Total, Projeção, Consumo Diário, Estado), Resource Breakdown (acordeão por provedor), Spend by Category (scroll interno discreto ao hover); datas do gráfico visíveis mesmo com dados zerados; i18n completo (pt, en, es) para todos os textos do dashboard.
+- **Testes:** `analyticsService.test.ts` – `resolveDateRange` (MTD, 7D, 30D) e `getDashboardAnalytics` com Prisma mock e fake timers (totais, tendência, forecast MTD, evolution, providerBreakdown, categories, filtro por provider).
 
 ---
 

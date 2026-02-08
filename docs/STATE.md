@@ -1,6 +1,6 @@
-# BurnWatch – STATE (Milestone 04 concluído)
+# BurnWatch – STATE (Milestone 05 – Dashboard Analytics)
 
-Este documento resume o estado atual da base de código após a conclusão do **Milestone 04: The Adapter Engine (Vercel Implementation)**. Inclui Milestones 01–03 (auth, organizações, membros, i18n, Configurações, **Conexões Cloud** com CRUD, credenciais encriptadas, status de sync) e, além disso: **motor de ingestão real** em `src/modules/adapter-engine` (ICloudProvider, VercelProvider com Billing API, SyncService, DailySpend por `cloudAccountId`), tratamento de erro 403/token inválido (chave `vercel-forbidden-error-sync` + traduções + tooltip), UX de estado “A sincronizar…” com prioridade e limpeza ao receber resposta, e validação de token Vercel em formato alfanumérico (ex. `R1O1lKO7v8L0svh4dTbw6pfu`). Serve como contexto para outras AIs continuarem o trabalho.
+Este documento resume o estado atual da base de código após a conclusão do **Milestone 05: The "Aha!" Dashboard** e dos anteriores. Inclui Milestones 01–04 (auth, organizações, membros, i18n, Configurações, Conexões Cloud, adapter-engine (ICloudProvider, VercelProvider com Billing API, SyncService, DailySpend por `cloudAccountId`), tratamento de erro 403/token inválido (chave `vercel-forbidden-error-sync` + traduções + tooltip), UX de estado “A sincronizar…” com prioridade e limpeza ao receber resposta, e validação de token Vercel em formato alfanumérico (ex. `R1O1lKO7v8L0svh4dTbw6pfu`). Inclui ainda o **módulo de analytics** (getDashboardAnalytics, evolução por provedor, projeção MTD, anomalia Z-score, resource breakdown, spend by category), **GET /api/analytics** e o dashboard com gráfico de evolução, métricas e i18n completo. Serve como contexto para outras AIs continuarem o trabalho.
 
 ---
 
@@ -274,6 +274,14 @@ Arquivo: `src/modules/billing/application/dailySpendService.ts`
 - **Bulk upsert:** `upsertDailySpendBulk(prisma, inputs[])` – recebe um array de `UpsertDailySpendInput` e executa todos os upserts numa única `prisma.$transaction(...)` (array de promises). Requer `Pick<PrismaClient, "dailySpend" | "$transaction">`. Retorna o número de linhas upsertadas. Usado pelo SyncService para persistir todas as rows de um dia de uma vez (melhoria de performance: sync completo passou de ~73s para ~35s).
 - Ambas usam o mesmo índice único `daily_spend_org_provider_service_date_account_unique`; múltiplos syncs com o mesmo `(org, cloudAccount, provider, service, date)` apenas atualizam o registro existente (idempotência de ingestão por conta).
 
+#### Analytics (Dashboard)
+
+Arquivos: `src/modules/analytics/application/analyticsService.ts`, `serviceNameToCategory.ts`
+
+- **resolveDateRange(range, now):** retorna `start`, `end`, `previousStart`, `previousEnd` em UTC. `range`: `"7D"` (últimos 7 dias), `"30D"` (30 dias), `"MTD"` (do dia 1 do mês até hoje). Período anterior tem o mesmo número de dias e termina no dia antes de `start`.
+- **getDashboardAnalytics(prisma, input):** entrada `organizationId`, `dateRange` (7D|30D|MTD), `providerFilter` (ALL|VERCEL|AWS|GCP). Consulta `DailySpend` no intervalo; agrega `totalCents`, tendência vs período anterior (`trendPercent`), projeção fim do mês só para MTD (`forecastCents = (totalMTD / daysElapsed) * totalDaysInMonth`), média dos últimos 7 dias (`dailyBurnCents`), anomalias (Z-score: dia > mean + 2*std nos últimos 7, conta hoje e ontem). Retorna ainda `evolution` (por dia: date, label, aws, vercel, gcp, total), `providerBreakdown` (por provedor com serviços ordenados por cents), `categories` (Compute, Network, Database, Storage, Observability, Automation, Other) via `serviceNameToCategory`.
+- **serviceNameToCategory:** mapeamento de nomes de serviço (incl. mapa explícito Vercel: Serverless Functions, Edge Functions → Compute; Bandwidth, Image Optimization, Log Drains → Network; Postgres, KV → Database; Blob → Storage; Web Analytics → Observability; Cron Jobs → Automation) para categorias universais; keywords para AWS/GCP.
+
 ---
 
 ## 8. Testes (Vitest) – “Testing for Confidence”
@@ -309,6 +317,13 @@ Arquivo: `src/modules/billing/application/dailySpendService.test.ts`
 - Usa `vi.fn()` para mockar `prisma.dailySpend.upsert`.
 - Chama `upsertDailySpend(prismaMock, input)` com `cloudAccountId`; verifica uso do índice `daily_spend_org_provider_service_date_account_unique`.
 
+### Módulo analytics
+
+Arquivo: `src/modules/analytics/application/analyticsService.test.ts`
+
+- **resolveDateRange:** MTD (start primeiro dia do mês, end hoje, período anterior com mesmo número de dias); 7D (7 dias incluindo hoje); 30D (30 dias incluindo hoje).
+- **getDashboardAnalytics:** mock de `prisma.dailySpend.findMany` e `aggregate` com `vi.useFakeTimers` para data fixa; casos: zero rows (totais zero, evolution com 5 dias, forecastCents 0 para MTD); agregação totalCents e trendPercent; MTD forecastCents = (totalMTD/daysElapsed)*totalDays; 7D sem forecast; evolution com aws/vercel/gcp e labels; providerBreakdown ordenado por total com services; categorias a partir de serviceName (Compute, Database); filtro por provider (where.provider).
+
 ### Módulo cloud-provider-credentials
 
 - **Validadores** (`src/modules/cloud-provider-credentials/util/cloud-credentials.ts`): validação só de formato para AWS (Access Key ID AKIA + 16 alfanuméricos, Secret 40 chars), **Vercel (token ≥ 16 chars; aceita formato com prefixo `v_tok_`/`vercel_` ou alfanumérico puro, ex. `R1O1lKO7v8L0svh4dTbw6pfu`)**, GCP (billing ID `012345-ABCDEF`, JSON com `type`, `private_key`, `client_email`). `validateCredentials`, `credentialsToPlaintext`. Testes em `util/cloud-credentials.test.ts`.
@@ -323,9 +338,12 @@ Arquivo: `src/modules/billing/application/dailySpendService.test.ts`
 - **SyncService** (`src/modules/adapter-engine/application/syncService.ts`): orquestra sync por conta (SYNCING → provider.fetchDailySpend → **bulk upsert** por dia via `upsertDailySpendBulk(prisma, dayInputs)` → SYNCED ou SYNC_ERROR com `lastSyncError` = chave ou mensagem). Cada dia é persistido numa única transação (todas as rows do dia de uma vez). Em erro do tipo `SyncErrorWithKey` grava a chave em `lastSyncError` para tradução na UI.
 - **Conexões (UI):** Em SYNC_ERROR com `lastSyncError`, tooltip na célula de estado mostra mensagem traduzida (chave `syncErrorVercelForbidden` em pt/en/es) ou texto bruto. Estado “A sincronizar…” tem prioridade (mostrado assim que o utilizador clica em sync); `syncingIds` é limpo ao receber resposta da API. **Ao criar um cloud provider:** a conta é adicionada já com `status: "SYNCING"` e o id em `syncingIds` no `onSuccess` do modal; condição unificada `showSyncing = isSyncing || acc.status === "SYNCING"` para a coluna “Último sync” (ícone + “Sincronizando…”), botão de sync (disabled + spin) e célula de estado — assim a primeira renderização já mostra loading em toda a linha. Token Vercel aceite em formato alfanumérico na validação do formulário.
 
-**Melhorias futuras (sync):** Para o MVP o sync é disparado na mesma requisição HTTP (POST `/api/cloud-accounts/[id]`) e o cliente aguarda a conclusão. Uma evolução natural é mover a ingestão para **background jobs com filas e workers** (ex.: Bull/BullMQ, Inngest, Trigger.dev ou equivalente), permitindo sync em segundo plano, retries automáticos e menor risco de timeout; a UI passaria a consultar o estado (`status` / `lastSyncedAt`) em vez de manter a conexão aberta até o fim. Por agora mantemos o fluxo síncrono por simplicidade.
+**Melhorias futuras (sync):** Para o MVP o sync é disparado na mesma requisição HTTP (POST `/api/cloud-accounts/[id]`) e o cliente aguarda a conclusão. Uma evolução natural é mover a ingestão para **background jobs com filas e workers**; a UI passaria a consultar o estado (`status` / `lastSyncedAt`) em vez de manter a conexão aberta até o fim. Por agora mantemos o fluxo síncrono por simplicidade.
 
-Resultado atual: `pnpm test` passa com todos os testes (incl. encryption, dailySpend, organizations, cloud-provider-credentials, adapter-engine syncService).
+- **Opção preferencial – Trigger.dev:** Plano free com limites documentados ([Limits](https://trigger.dev/docs/limits)): concurrency (ex.: 10–20 runs em prod), $5/mês de uso incluído, 10 schedules, retries e dashboard. Integração Next.js (Route Handler ou Server Action com `tasks.trigger()`), filas e [Concurrency & Queues](https://trigger.dev/docs/queue-concurrency) com `concurrencyLimit` e `concurrencyKey` (per-tenant, ex. por `organizationId`). Deploy via CLI ou [GitHub Actions](https://trigger.dev/docs/github-actions); as tasks correm na infra Trigger.dev (sync longo sem timeout). Documentação e pricing públicos.
+- **Alternativa – Vercel Queues:** [Limited Beta](https://vercel.com/changelog/vercel-queues-is-now-in-limited-beta); SDK `@vercel/queue` (alpha). Limites técnicos: 1 000 msg/s por tópico, payload máx 4,5 MB. Plano free e quotas não estão documentados na página de limites/preços da Vercel; considerar quando a oferta e o free tier estiverem claros.
+
+Resultado atual: `pnpm test` passa com todos os testes (incl. encryption, dailySpend, organizations, cloud-provider-credentials, adapter-engine syncService, **analytics analyticsService**).
 
 ---
 
@@ -389,5 +407,5 @@ Comparado à descrição em `docs/sprints/SPRINT_01.md` (Milestone 2), o que foi
 
 **Milestone 04 concluído – The Adapter Engine (Vercel Implementation):** Módulo `adapter-engine` com ICloudProvider, VercelProvider (Billing API real), SyncService e DailySpend por `cloudAccountId`; POST `/api/cloud-accounts/[id]` para sync; tratamento de 403/token inválido (chave `vercel-forbidden-error-sync` + traduções + tooltip); UX de estado “A sincronizar…” com prioridade e limpeza ao receber resposta; **bulk upsert** por dia em DailySpend (sync completo ~73s → ~35s); loading unificado ao criar conexão (coluna “Último sync”, ícone de sync e Estado desde a primeira renderização); validação de token Vercel em formato alfanumérico (mín. 16 caracteres).
 
-**Próximo passo – Milestone 5: The "Aha!" Dashboard** (cf. `docs/sprints/SPRINT_01.md`): ligar DailySpend real aos gráficos, projeção (regressão linear), deteção de anomalia, polimento final.
+**Milestone 05 concluído – The "Aha!" Dashboard:** Módulo `analytics` com getDashboardAnalytics (evolução por dia/provedor, projeção MTD, daily burn, anomalia Z-score, resource breakdown, spend by category); serviceNameToCategory com categorias Observability e Automation e mapa Vercel; GET /api/analytics; dashboard com gráfico de evolução (múltiplas linhas quando All), métricas, scroll discreto e i18n completo. Testes em `analyticsService.test.ts` (resolveDateRange e getDashboardAnalytics com Prisma mock e fake timers).
 
