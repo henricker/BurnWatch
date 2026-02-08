@@ -13,6 +13,8 @@ import {
 } from "@/modules/cloud-provider-credentials/application/cloudCredentialsService";
 import { getProfileByUserId } from "@/modules/organizations/application/profileService";
 
+export const dynamic = "force-dynamic";
+
 /**
  * GET: List cloud accounts for the current user's organization.
  */

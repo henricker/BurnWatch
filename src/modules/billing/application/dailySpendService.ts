@@ -49,7 +49,7 @@ export async function upsertDailySpend(
     },
     update: {
       amountCents,
-      currency,
+      currency: currency ?? "USD",
     },
   });
 }

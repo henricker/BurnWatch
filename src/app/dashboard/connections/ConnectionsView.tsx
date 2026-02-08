@@ -170,7 +170,10 @@ export function ConnectionsView() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithRetry("/api/cloud-accounts");
+      const res = await fetchWithRetry("/api/cloud-accounts", {
+        cache: "no-store",
+        headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
+      });
       if (!res.ok) {
         setError(t("failedToLoad"));
         return;
@@ -217,28 +220,39 @@ export function ConnectionsView() {
   };
 
   async function handleSyncClick(acc: AccountRow) {
-    addSyncing(acc.id);
+    const accountId = acc.id;
+    addSyncing(accountId);
+    const optimisticNow = new Date().toISOString();
+    setAccounts((prev) =>
+      prev.map((a) =>
+        a.id === accountId ? { ...a, lastSyncedAt: optimisticNow } : a,
+      ),
+    );
     try {
-      const res = await fetchWithRetry(`/api/cloud-accounts/${acc.id}`, {
+      const res = await fetchWithRetry(`/api/cloud-accounts/${accountId}`, {
         method: "POST",
+        cache: "no-store",
       });
-      const data = (await res.json()).catch(() => null) as {
-        lastSyncedAt?: string | null;
-        status?: CloudAccountStatus;
-        lastSyncError?: string | null;
-      } | null;
+      type SyncResponse = { status?: CloudAccountStatus; lastSyncError?: string | null };
+      let data: SyncResponse | null = null;
+      try {
+        data = (await res.json()) as SyncResponse;
+      } catch {
+        // ignore parse error
+      }
       setSyncingIds((prev) => {
         const next = new Set(prev);
-        next.delete(acc.id);
+        next.delete(accountId);
         return next;
       });
-      if (!res.ok || !data) return;
+      if (!res.ok) return;
+      const nowIso = new Date().toISOString();
       setAccounts((prev) =>
         prev.map((a) =>
-          a.id === acc.id
+          a.id === accountId
             ? {
                 ...a,
-                lastSyncedAt: data?.lastSyncedAt ?? a.lastSyncedAt,
+                lastSyncedAt: nowIso,
                 status: data?.status ?? "SYNCED",
                 lastSyncError: data?.lastSyncError ?? null,
               }
@@ -248,7 +262,7 @@ export function ConnectionsView() {
     } catch {
       setSyncingIds((prev) => {
         const next = new Set(prev);
-        next.delete(acc.id);
+        next.delete(accountId);
         return next;
       });
     }
