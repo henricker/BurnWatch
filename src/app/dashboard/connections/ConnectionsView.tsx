@@ -48,6 +48,9 @@ type CloudProvider = "AWS" | "VERCEL" | "GCP";
 
 type CloudAccountStatus = "SYNCED" | "SYNCING" | "SYNC_ERROR";
 
+/** Keys stored in lastSyncError; map to translated messages in Connections. */
+const SYNC_ERROR_VERCEL_FORBIDDEN = "vercel-forbidden-error-sync";
+
 type AccountRow = {
   id: string;
   provider: CloudProvider;
@@ -219,26 +222,35 @@ export function ConnectionsView() {
       const res = await fetchWithRetry(`/api/cloud-accounts/${acc.id}`, {
         method: "POST",
       });
-      if (!res.ok) return;
-      const data = (await res.json()) as {
-        lastSyncedAt: string | null;
+      const data = (await res.json()).catch(() => null) as {
+        lastSyncedAt?: string | null;
         status?: CloudAccountStatus;
         lastSyncError?: string | null;
-      };
+      } | null;
+      setSyncingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(acc.id);
+        return next;
+      });
+      if (!res.ok || !data) return;
       setAccounts((prev) =>
         prev.map((a) =>
           a.id === acc.id
             ? {
                 ...a,
-                lastSyncedAt: data.lastSyncedAt,
-                status: data.status ?? "SYNCED",
-                lastSyncError: data.lastSyncError ?? null,
+                lastSyncedAt: data?.lastSyncedAt ?? a.lastSyncedAt,
+                status: data?.status ?? "SYNCED",
+                lastSyncError: data?.lastSyncError ?? null,
               }
             : a,
         ),
       );
     } catch {
-      // ignore
+      setSyncingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(acc.id);
+        return next;
+      });
     }
   }
 
@@ -404,33 +416,39 @@ export function ConnectionsView() {
                             </div>
                           </td>
                           <td className="px-6 py-5">
-                            <div className="flex items-center gap-2">
-                              <div
-                                className={`h-1.5 w-1.5 rounded-full ${
-                                  isSyncing || acc.status === "SYNCING"
-                                    ? "bg-orange-500 animate-pulse"
-                                    : acc.status === "SYNC_ERROR"
-                                      ? "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]"
-                                      : "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]"
-                                }`}
-                              />
-                              <span
-                                title={acc.status === "SYNC_ERROR" && acc.lastSyncError ? acc.lastSyncError : undefined}
-                                className={`text-[10px] font-bold uppercase tracking-wider ${
-                                  isSyncing || acc.status === "SYNCING"
-                                    ? "text-orange-500"
-                                    : acc.status === "SYNC_ERROR"
-                                      ? "text-red-600 dark:text-red-500"
-                                      : "text-green-600 dark:text-green-500"
-                                }`}
-                              >
-                                {isSyncing || acc.status === "SYNCING"
-                                  ? t("statusSyncing")
-                                  : acc.status === "SYNC_ERROR"
-                                    ? t("statusError")
-                                    : t("statusSynced")}
-                              </span>
-                            </div>
+                            {isSyncing || acc.status === "SYNCING" ? (
+                              <div className="flex items-center gap-2">
+                                <div className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse" />
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-orange-500">
+                                  {t("statusSyncing")}
+                                </span>
+                              </div>
+                            ) : acc.status === "SYNC_ERROR" && acc.lastSyncError ? (
+                              <TooltipProvider delayDuration={300}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="flex cursor-help items-center gap-2">
+                                      <div className="h-1.5 w-1.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]" />
+                                      <span className="text-[10px] font-bold uppercase tracking-wider text-red-600 dark:text-red-500">
+                                        {t("statusError")}
+                                      </span>
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" className="max-w-xs">
+                                    {acc.lastSyncError === SYNC_ERROR_VERCEL_FORBIDDEN
+                                      ? t("syncErrorVercelForbidden")
+                                      : acc.lastSyncError}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <div className="h-1.5 w-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]" />
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-green-600 dark:text-green-500">
+                                  {t("statusSynced")}
+                                </span>
+                              </div>
+                            )}
                           </td>
                           <td className="px-6 py-5 text-right">
                             <TooltipProvider delayDuration={300}>
