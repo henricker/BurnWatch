@@ -135,14 +135,13 @@ describe("createAccount", () => {
   it("creates account with encrypted credentials and returns DTO", async () => {
     const created = new Date("2025-01-01T12:00:00Z");
     const updated = new Date("2025-01-01T12:00:00Z");
-    const lastSynced = new Date("2025-01-01T12:00:00Z");
     const createMock = vi.fn().mockResolvedValue({
       id: "new-acc-id",
       provider: "AWS",
       label: "My AWS",
       status: "SYNCED",
       lastSyncError: null,
-      lastSyncedAt: lastSynced,
+      lastSyncedAt: null,
       createdAt: created,
       updatedAt: updated,
     });
@@ -167,7 +166,7 @@ describe("createAccount", () => {
       label: "My AWS",
     });
     expect(callData.encryptedCredentials).toContain("encrypted:");
-    expect(callData.lastSyncedAt).toBeInstanceOf(Date);
+    expect(callData.lastSyncedAt).toBeUndefined();
 
     expect(result.id).toBe("new-acc-id");
     expect(result.provider).toBe("AWS");

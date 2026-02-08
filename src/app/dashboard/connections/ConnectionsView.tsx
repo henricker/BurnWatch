@@ -222,10 +222,9 @@ export function ConnectionsView() {
   async function handleSyncClick(acc: AccountRow) {
     const accountId = acc.id;
     addSyncing(accountId);
-    const optimisticNow = new Date().toISOString();
     setAccounts((prev) =>
       prev.map((a) =>
-        a.id === accountId ? { ...a, lastSyncedAt: optimisticNow } : a,
+        a.id === accountId ? { ...a, status: "SYNCING" as const } : a,
       ),
     );
     try {
@@ -245,7 +244,20 @@ export function ConnectionsView() {
         next.delete(accountId);
         return next;
       });
-      if (!res.ok) return;
+      if (!res.ok) {
+        setAccounts((prev) =>
+          prev.map((a) =>
+            a.id === accountId
+              ? {
+                  ...a,
+                  status: "SYNC_ERROR" as const,
+                  lastSyncError: (data?.lastSyncError ?? "Sync failed") || null,
+                }
+              : a,
+          ),
+        );
+        return;
+      }
       const nowIso = new Date().toISOString();
       setAccounts((prev) =>
         prev.map((a) =>
@@ -265,6 +277,13 @@ export function ConnectionsView() {
         next.delete(accountId);
         return next;
       });
+      setAccounts((prev) =>
+        prev.map((a) =>
+          a.id === accountId
+            ? { ...a, status: "SYNC_ERROR" as const, lastSyncError: "Sync failed" }
+            : a,
+        ),
+      );
     }
   }
 
@@ -394,6 +413,7 @@ export function ConnectionsView() {
                   ) : (
                     filteredAccounts.map((acc) => {
                       const isSyncing = syncingIds.has(acc.id);
+                      const showSyncing = isSyncing || acc.status === "SYNCING";
                       return (
                         <tr
                           key={acc.id}
@@ -421,16 +441,16 @@ export function ConnectionsView() {
                           </td>
                           <td className="px-6 py-5">
                             <div className="flex items-center gap-2 font-mono text-[10px] text-slate-400 dark:text-zinc-500">
-                              {isSyncing ? (
+                              {showSyncing ? (
                                 <RefreshCw size={12} className="animate-spin text-orange-500" />
                               ) : (
                                 <span className="inline-block size-3" />
                               )}
-                              {formatLastSync(acc.lastSyncedAt, isSyncing, t)}
+                              {formatLastSync(acc.lastSyncedAt, showSyncing, t)}
                             </div>
                           </td>
                           <td className="px-6 py-5">
-                            {isSyncing || acc.status === "SYNCING" ? (
+                            {showSyncing ? (
                               <div className="flex items-center gap-2">
                                 <div className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse" />
                                 <span className="text-[10px] font-bold uppercase tracking-wider text-orange-500">
@@ -472,13 +492,13 @@ export function ConnectionsView() {
                                     <button
                                       type="button"
                                       onClick={() => void handleSyncClick(acc)}
-                                      disabled={isSyncing}
+                                      disabled={showSyncing}
                                       className="rounded-lg p-2 text-slate-400 transition-all hover:bg-orange-500/5 hover:text-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
                                       aria-label={t("tooltipManualSync")}
                                     >
                                       <RefreshCw
                                         size={16}
-                                        className={isSyncing ? "animate-spin" : undefined}
+                                        className={showSyncing ? "animate-spin" : undefined}
                                       />
                                     </button>
                                   </TooltipTrigger>
@@ -556,10 +576,12 @@ export function ConnectionsView() {
         open={addModalOpen}
         onOpenChange={setAddModalOpen}
         onSuccess={(newAccount) => {
-          setAccounts((prev) => [newAccount, ...prev]);
+          const syncingAccount = { ...newAccount, status: "SYNCING" as const };
+          setAccounts((prev) => [syncingAccount, ...prev]);
           addSyncing(newAccount.id);
           setAddModalOpen(false);
           router.refresh();
+          void handleSyncClick(syncingAccount);
         }}
         onError={(msg) => setError(msg)}
       />

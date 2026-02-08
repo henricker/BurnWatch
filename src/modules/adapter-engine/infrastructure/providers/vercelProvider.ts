@@ -14,28 +14,84 @@ import {
 
 const VERCEL_BILLING_URL = "https://api.vercel.com/v1/billing/charges";
 
+/** Format as YYYY-MM-DDT00:00:00.000Z for Vercel billing payloads. */
+function toPeriodISO(dateStr: string): string {
+  const normalized = dateStr.slice(0, 10);
+  return `${normalized}T00:00:00.000Z`;
+}
+
+/**
+ * Random value around mean with small standard deviation (approx normal).
+ * stdDevRatio defaults to 0.15 (~15%); result is >= 0 and rounded to 2 decimals.
+ */
+function randomAroundMean(mean: number, stdDevRatio: number = 0.15): number {
+  const stdDev = mean * stdDevRatio;
+  let z = 0;
+  for (let i = 0; i < 12; i++) z += Math.random();
+  z = (z - 6) * stdDev;
+  const value = Math.max(0, mean + z);
+  return Math.round(value * 100) / 100;
+}
+
 /**
  * Returns fake JSONL string matching Vercel Billing API response shape.
- * For local/testing only. Uses a fixed date so that repeated syncs upsert the same rows
- * (same org/account/service/date) and you see amount updates; with a dynamic "yesterday"
- * each day would create new rows instead of updating.
+ * For local/testing only. BilledCost (and EffectiveCost) are random around a mean with small variance.
+ * Accepts from/to (YYYY-MM-DD); ChargePeriodStart/End are always YYYY-MM-DDT00:00:00.000Z.
  */
-export function fakeVercelBilledResponse(): string {
-  const periodStart = "2026-01-03T00:00:00.000Z";
-  const periodEnd = "2026-01-04T00:00:00.000Z";
+export function fakeVercelBilledResponse(from: string, to: string): string {
+  const periodStart = toPeriodISO(from);
+  const periodEnd = toPeriodISO(to);
 
-  const lines = [
-    { BilledCost: 10.5, BillingCurrency: "USD", ChargeCategory: "Usage", ChargePeriodStart: periodStart, ChargePeriodEnd: periodEnd, ConsumedQuantity: 1250, ConsumedUnit: "invocations", EffectiveCost: 12.5, ServiceName: "Serverless Functions", ServiceProviderName: "Vercel", Tags: { projectId: "prj_abc123" }, PricingCategory: "Standard", PricingCurrency: "USD", PricingQuantity: 1250, PricingUnit: "invocations", RegionId: "global", RegionName: "Global", ServiceCategory: "Compute" },
-    { BilledCost: 2.2, BillingCurrency: "USD", ChargeCategory: "Usage", ChargePeriodStart: periodStart, ChargePeriodEnd: periodEnd, ConsumedQuantity: 42, ConsumedUnit: "GB", EffectiveCost: 4.2, ServiceName: "Bandwidth", ServiceProviderName: "Vercel", Tags: { projectId: "prj_abc123" }, PricingCategory: "Standard", PricingCurrency: "USD", PricingQuantity: 42, PricingUnit: "GB", RegionId: "global", RegionName: "Global", ServiceCategory: "Networking" },
-    { BilledCost: 12.75, BillingCurrency: "USD", ChargeCategory: "Usage", ChargePeriodStart: periodStart, ChargePeriodEnd: periodEnd, ConsumedQuantity: 750000, ConsumedUnit: "readUnits", EffectiveCost: 0.75, ServiceName: "Postgres", ServiceProviderName: "Vercel", Tags: { projectId: "prj_def456", databaseId: "db_xyz789" }, PricingCategory: "Standard", PricingCurrency: "USD", PricingQuantity: 750000, PricingUnit: "readUnits", RegionId: "iad1", RegionName: "Washington D.C.", ServiceCategory: "Databases" },
-    { BilledCost: 4.8, BillingCurrency: "USD", ChargeCategory: "Usage", ChargePeriodStart: periodStart, ChargePeriodEnd: periodEnd, ConsumedQuantity: 380, ConsumedUnit: "invocations", EffectiveCost: 3.8, ServiceName: "Edge Functions", ServiceProviderName: "Vercel", Tags: { projectId: "prj_abc123" }, PricingCategory: "Standard", PricingCurrency: "USD", PricingQuantity: 380, PricingUnit: "invocations", RegionId: "global", RegionName: "Global", ServiceCategory: "Compute" },
-    { BilledCost: 15.25, BillingCurrency: "USD", ChargeCategory: "Usage", ChargePeriodStart: periodStart, ChargePeriodEnd: periodEnd, ConsumedQuantity: 125, ConsumedUnit: "GB", EffectiveCost: 1.25, ServiceName: "KV", ServiceProviderName: "Vercel", Tags: { projectId: "prj_kv1" }, PricingCategory: "Standard", PricingCurrency: "USD", PricingQuantity: 125, PricingUnit: "GB", RegionId: "global", RegionName: "Global", ServiceCategory: "Databases" },
-    { BilledCost: 1.1, BillingCurrency: "USD", ChargeCategory: "Usage", ChargePeriodStart: periodStart, ChargePeriodEnd: periodEnd, ConsumedQuantity: 210, ConsumedUnit: "GB", EffectiveCost: 2.1, ServiceName: "Blob", ServiceProviderName: "Vercel", Tags: { projectId: "prj_blob1" }, PricingCategory: "Standard", PricingCurrency: "USD", PricingQuantity: 210, PricingUnit: "GB", RegionId: "global", RegionName: "Global", ServiceCategory: "Storage" },
-    { BilledCost: 34.5, BillingCurrency: "USD", ChargeCategory: "Usage", ChargePeriodStart: periodStart, ChargePeriodEnd: periodEnd, ConsumedQuantity: 5000, ConsumedUnit: "images", EffectiveCost: 0.5, ServiceName: "Image Optimization", ServiceProviderName: "Vercel", Tags: { projectId: "prj_abc123" }, PricingCategory: "Standard", PricingCurrency: "USD", PricingQuantity: 5000, PricingUnit: "images", RegionId: "global", RegionName: "Global", ServiceCategory: "Media" },
-    { BilledCost: 12.3, BillingCurrency: "USD", ChargeCategory: "Usage", ChargePeriodStart: periodStart, ChargePeriodEnd: periodEnd, ConsumedQuantity: 30, ConsumedUnit: "jobs", EffectiveCost: 0.3, ServiceName: "Cron Jobs", ServiceProviderName: "Vercel", Tags: { projectId: "prj_abc123" }, PricingCategory: "Standard", PricingCurrency: "USD", PricingQuantity: 30, PricingUnit: "jobs", RegionId: "global", RegionName: "Global", ServiceCategory: "Compute" },
-    { BilledCost: 25.0, BillingCurrency: "USD", ChargeCategory: "Usage", ChargePeriodStart: periodStart, ChargePeriodEnd: periodEnd, ConsumedQuantity: 5000000, ConsumedUnit: "events", EffectiveCost: 5.0, ServiceName: "Web Analytics", ServiceProviderName: "Vercel", Tags: { projectId: "prj_abc123" }, PricingCategory: "Standard", PricingCurrency: "USD", PricingQuantity: 5000000, PricingUnit: "events", RegionId: "global", RegionName: "Global", ServiceCategory: "Analytics" },
-    { BilledCost: 14.8, BillingCurrency: "USD", ChargeCategory: "Usage", ChargePeriodStart: periodStart, ChargePeriodEnd: periodEnd, ConsumedQuantity: 80, ConsumedUnit: "GB", EffectiveCost: 0.8, ServiceName: "Log Drains", ServiceProviderName: "Vercel", Tags: { projectId: "prj_abc123" }, PricingCategory: "Standard", PricingCurrency: "USD", PricingQuantity: 80, PricingUnit: "GB", RegionId: "global", RegionName: "Global", ServiceCategory: "Observability" },
+  const means = [
+    { mean: 10.5, service: "Serverless Functions", consumed: 1250, unit: "invocations", tags: { projectId: "prj_abc123" } },
+    { mean: 2.2, service: "Bandwidth", consumed: 42, unit: "GB", tags: { projectId: "prj_abc123" } },
+    { mean: 12.75, service: "Postgres", consumed: 750000, unit: "readUnits", tags: { projectId: "prj_def456", databaseId: "db_xyz789" } },
+    { mean: 4.8, service: "Edge Functions", consumed: 380, unit: "invocations", tags: { projectId: "prj_abc123" } },
+    { mean: 15.25, service: "KV", consumed: 125, unit: "GB", tags: { projectId: "prj_kv1" } },
+    { mean: 1.1, service: "Blob", consumed: 210, unit: "GB", tags: { projectId: "prj_blob1" } },
+    { mean: 34.5, service: "Image Optimization", consumed: 5000, unit: "images", tags: { projectId: "prj_abc123" } },
+    { mean: 12.3, service: "Cron Jobs", consumed: 30, unit: "jobs", tags: { projectId: "prj_abc123" } },
+    { mean: 25.0, service: "Web Analytics", consumed: 5000000, unit: "events", tags: { projectId: "prj_abc123" } },
+    { mean: 14.8, service: "Log Drains", consumed: 80, unit: "GB", tags: { projectId: "prj_abc123" } },
   ];
+
+  const lines = means.map(({ mean, service, consumed, unit, tags }) => {
+    const billed = randomAroundMean(mean);
+    const effective = randomAroundMean(mean, 0.12);
+    return {
+      BilledCost: billed,
+      BillingCurrency: "USD",
+      ChargeCategory: "Usage",
+      ChargePeriodStart: periodStart,
+      ChargePeriodEnd: periodEnd,
+      ConsumedQuantity: consumed,
+      ConsumedUnit: unit,
+      EffectiveCost: effective,
+      ServiceName: service,
+      ServiceProviderName: "Vercel",
+      Tags: tags,
+      PricingCategory: "Standard",
+      PricingCurrency: "USD",
+      PricingQuantity: consumed,
+      PricingUnit: unit,
+      RegionId: service === "Postgres" ? "iad1" : "global",
+      RegionName: service === "Postgres" ? "Washington D.C." : "Global",
+      ServiceCategory:
+        service === "Serverless Functions" || service === "Edge Functions" || service === "Cron Jobs"
+          ? "Compute"
+          : service === "Bandwidth"
+            ? "Networking"
+            : service === "Postgres" || service === "KV"
+              ? "Databases"
+              : service === "Blob"
+                ? "Storage"
+                : service === "Image Optimization"
+                  ? "Media"
+                  : service === "Web Analytics"
+                    ? "Analytics"
+                    : "Observability",
+    };
+  });
   return lines.map((obj) => JSON.stringify(obj)).join("\n");
 }
 
@@ -95,7 +151,7 @@ export class VercelProvider implements ICloudProvider {
 
   async fetchDailySpend(cloudAccount: CloudAccount, range: FetchRange): Promise<DailySpendData[]> {
     if (process.env.USE_FAKE_VERCEL_BILLING === "true") {
-      return this.getVercelResults(fakeVercelBilledResponse());
+      return this.getVercelResults(fakeVercelBilledResponse(range.from, range.to));
     }
 
     const token = this.getToken(cloudAccount);

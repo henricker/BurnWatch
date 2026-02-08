@@ -132,14 +132,13 @@ export async function createAccount(
   const plaintext = credentialsToPlaintext(provider, payload);
   const encryptedCredentials = encryption.encrypt(plaintext);
 
-  const now = new Date();
   const account = await prisma.cloudAccount.create({
     data: {
       organizationId,
       provider,
       label: trimmedLabel,
       encryptedCredentials,
-      lastSyncedAt: now,
+      // lastSyncedAt left null so the first sync does a 7-day backfill
     },
     select: {
       id: true,
