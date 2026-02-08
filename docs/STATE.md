@@ -270,28 +270,9 @@ Arquivo: `src/modules/billing/application/dailySpendService.ts`
     currency?: string;
   }
   ```
-- Função principal:
-  ```ts
-  export async function upsertDailySpend(
-    prisma: Pick<PrismaClient, "dailySpend">,
-    input: UpsertDailySpendInput,
-  ) {
-    return prisma.dailySpend.upsert({
-      where: {
-        daily_spend_org_provider_service_date_account_unique: {
-          organizationId,
-          cloudAccountId,
-          provider,
-          serviceName,
-          date,
-        },
-      },
-      create: { ... },
-      update: { amountCents, currency },
-    });
-  }
-  ```
-- Garante que múltiplos syncs com o mesmo `(org, cloudAccount, provider, service, date)` apenas atualizam o registro existente (idempotência de ingestão por conta).
+- **Single upsert:** `upsertDailySpend(prisma, input)` – um registro por chamada; usa `Pick<PrismaClient, "dailySpend">`.
+- **Bulk upsert:** `upsertDailySpendBulk(prisma, inputs[])` – recebe um array de `UpsertDailySpendInput` e executa todos os upserts numa única `prisma.$transaction(...)` (array de promises). Requer `Pick<PrismaClient, "dailySpend" | "$transaction">`. Retorna o número de linhas upsertadas. Usado pelo SyncService para persistir todas as rows de um dia de uma vez (melhoria de performance: sync completo passou de ~73s para ~35s).
+- Ambas usam o mesmo índice único `daily_spend_org_provider_service_date_account_unique`; múltiplos syncs com o mesmo `(org, cloudAccount, provider, service, date)` apenas atualizam o registro existente (idempotência de ingestão por conta).
 
 ---
 
@@ -339,8 +320,10 @@ Arquivo: `src/modules/billing/application/dailySpendService.test.ts`
 - **Domínio** (`src/modules/adapter-engine/domain/cloudProvider.ts`): interface `ICloudProvider` (`fetchDailySpend(cloudAccount, range)`), tipos `DailySpendData`, `FetchRange`, constante `SYNC_ERROR_VERCEL_FORBIDDEN` e classe `SyncErrorWithKey` para erros com chave armazenável em `lastSyncError`.
 - **VercelProvider** (`src/modules/adapter-engine/infrastructure/providers/vercelProvider.ts`): integração real com Vercel Billing API (`GET /v1/billing/charges`), desencriptação do token, resposta JSONL normalizada para `amountCents` e `serviceName`; em 403 com `invalidToken`/“Not authorized” lança `SyncErrorWithKey` com chave `vercel-forbidden-error-sync`.
 - **MockProvider** (`src/modules/adapter-engine/infrastructure/providers/mockProvider.ts`): retorna `[]` para AWS/GCP (placeholder até implementação real).
-- **SyncService** (`src/modules/adapter-engine/application/syncService.ts`): orquestra sync por conta (SYNCING → provider.fetchDailySpend → upsert DailySpend com `cloudAccountId` → SYNCED ou SYNC_ERROR com `lastSyncError` = chave ou mensagem). Em erro do tipo `SyncErrorWithKey` grava a chave em `lastSyncError` para tradução na UI.
-- **Conexões (UI):** Em SYNC_ERROR com `lastSyncError`, tooltip na célula de estado mostra mensagem traduzida (chave `syncErrorVercelForbidden` em pt/en/es) ou texto bruto. Estado “A sincronizar…” tem prioridade (mostrado assim que o utilizador clica em sync); `syncingIds` é limpo ao receber resposta da API. Token Vercel aceite em formato alfanumérico na validação do formulário.
+- **SyncService** (`src/modules/adapter-engine/application/syncService.ts`): orquestra sync por conta (SYNCING → provider.fetchDailySpend → **bulk upsert** por dia via `upsertDailySpendBulk(prisma, dayInputs)` → SYNCED ou SYNC_ERROR com `lastSyncError` = chave ou mensagem). Cada dia é persistido numa única transação (todas as rows do dia de uma vez). Em erro do tipo `SyncErrorWithKey` grava a chave em `lastSyncError` para tradução na UI.
+- **Conexões (UI):** Em SYNC_ERROR com `lastSyncError`, tooltip na célula de estado mostra mensagem traduzida (chave `syncErrorVercelForbidden` em pt/en/es) ou texto bruto. Estado “A sincronizar…” tem prioridade (mostrado assim que o utilizador clica em sync); `syncingIds` é limpo ao receber resposta da API. **Ao criar um cloud provider:** a conta é adicionada já com `status: "SYNCING"` e o id em `syncingIds` no `onSuccess` do modal; condição unificada `showSyncing = isSyncing || acc.status === "SYNCING"` para a coluna “Último sync” (ícone + “Sincronizando…”), botão de sync (disabled + spin) e célula de estado — assim a primeira renderização já mostra loading em toda a linha. Token Vercel aceite em formato alfanumérico na validação do formulário.
+
+**Melhorias futuras (sync):** Para o MVP o sync é disparado na mesma requisição HTTP (POST `/api/cloud-accounts/[id]`) e o cliente aguarda a conclusão. Uma evolução natural é mover a ingestão para **background jobs com filas e workers** (ex.: Bull/BullMQ, Inngest, Trigger.dev ou equivalente), permitindo sync em segundo plano, retries automáticos e menor risco de timeout; a UI passaria a consultar o estado (`status` / `lastSyncedAt`) em vez de manter a conexão aberta até o fim. Por agora mantemos o fluxo síncrono por simplicidade.
 
 Resultado atual: `pnpm test` passa com todos os testes (incl. encryption, dailySpend, organizations, cloud-provider-credentials, adapter-engine syncService).
 
@@ -404,7 +387,7 @@ Comparado à descrição em `docs/sprints/SPRINT_01.md` (Milestone 2), o que foi
 
 **Milestone 03 concluído – Credential Management UI (CRUD):** Página Conexões em `/dashboard/connections`; CRUD de CloudAccounts (Vercel, AWS, GCP) com credenciais encriptadas; módulo `cloud-provider-credentials` (validadores + `cloudCredentialsService`); status por conta e Sync Health; APIs como orquestradoras; testes unitários para validadores e serviço.
 
-**Milestone 04 concluído – The Adapter Engine (Vercel Implementation):** Módulo `adapter-engine` com ICloudProvider, VercelProvider (Billing API real), SyncService e DailySpend por `cloudAccountId`; POST `/api/cloud-accounts/[id]` para sync; tratamento de 403/token inválido (chave `vercel-forbidden-error-sync` + traduções + tooltip); UX de estado “A sincronizar…” com prioridade e limpeza ao receber resposta; validação de token Vercel em formato alfanumérico (mín. 16 caracteres).
+**Milestone 04 concluído – The Adapter Engine (Vercel Implementation):** Módulo `adapter-engine` com ICloudProvider, VercelProvider (Billing API real), SyncService e DailySpend por `cloudAccountId`; POST `/api/cloud-accounts/[id]` para sync; tratamento de 403/token inválido (chave `vercel-forbidden-error-sync` + traduções + tooltip); UX de estado “A sincronizar…” com prioridade e limpeza ao receber resposta; **bulk upsert** por dia em DailySpend (sync completo ~73s → ~35s); loading unificado ao criar conexão (coluna “Último sync”, ícone de sync e Estado desde a primeira renderização); validação de token Vercel em formato alfanumérico (mín. 16 caracteres).
 
 **Próximo passo – Milestone 5: The "Aha!" Dashboard** (cf. `docs/sprints/SPRINT_01.md`): ligar DailySpend real aos gráficos, projeção (regressão linear), deteção de anomalia, polimento final.
 

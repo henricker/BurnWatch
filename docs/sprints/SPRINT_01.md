@@ -56,8 +56,9 @@ Construir a "Steel Thread" técnica do BurnWatch: desde a autenticação e gest�
 - **Tratamento 403 / token inválido:** Em 403 com `invalidToken` ou “Not authorized”, lança `SyncErrorWithKey`; `SyncService` grava a chave `vercel-forbidden-error-sync` em `lastSyncError`; traduções (pt, en, es) e tooltip na célula de estado em Connections para mensagem amigável.
 - **Normalization:** Mapeamento para `DailySpend` com `amountCents` (inteiros); `DailySpend` com `cloudAccountId` e índice único `daily_spend_org_provider_service_date_account_unique`.
 - **Idempotência:** Upsert por `(organizationId, cloudAccountId, provider, serviceName, date)`; `dailySpendService` e testes atualizados para `cloudAccountId`.
-- **SyncService:** Orquestração (SYNCING → provider → upsert → SYNCED ou SYNC_ERROR); `POST /api/cloud-accounts/[id]` para sync manual.
-- **UX:** Estado “A sincronizar…” com prioridade sobre erro anterior; limpeza de `syncingIds` ao receber resposta da API; tooltip de erro traduzido em SYNC_ERROR.
+- **DailySpendService:** `upsertDailySpend` (single) mantido; nova função `upsertDailySpendBulk(prisma, inputs[])` que executa todos os upserts numa única `prisma.$transaction(...)`.
+- **SyncService:** Orquestração (SYNCING → provider → **bulk upsert por dia** → SYNCED ou SYNC_ERROR); `POST /api/cloud-accounts/[id]` para sync manual. Cada dia é persistido numa única transação via `upsertDailySpendBulk(prisma, dayInputs)` (performance: sync completo passou de ~73s para ~35s).
+- **UX:** Estado “A sincronizar…” com prioridade sobre erro anterior; limpeza de `syncingIds` ao receber resposta da API; tooltip de erro traduzido em SYNC_ERROR. **Ao criar cloud provider:** loading unificado em toda a linha desde a primeira renderização (coluna "Último sync" com ícone + "Sincronizando…", botão de sync em spin/disabled, Estado "SINCRONIZANDO"); conta adicionada já com `status: "SYNCING"` e id em `syncingIds` no `onSuccess` do modal.
 - **Validação Vercel:** Token aceite em formato alfanumérico (ex. `R1O1lKO7v8L0svh4dTbw6pfu`), mínimo 16 caracteres.
 - **MockProvider:** Placeholder para AWS/GCP (retorna `[]`) até implementação futura.
 
