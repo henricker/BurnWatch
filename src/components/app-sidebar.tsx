@@ -17,6 +17,7 @@ import {
   Sun,
   Moon,
   ShieldCheck,
+  Globe,
 } from "lucide-react";
 
 import { useLocaleOverride } from "@/components/locale-override-provider";
@@ -34,6 +35,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import {
   DropdownMenu,
@@ -77,9 +79,12 @@ export function AppSidebar({
   const tLocale = useTranslations("Locale");
   const pathname = usePathname();
   const router = useRouter();
+  const { state: sidebarState } = useSidebar();
   const { theme, setTheme, resolvedTheme } = useTheme();
   const localeContext = useLocaleOverride();
   const [mounted, setMounted] = useState(false);
+
+  const isCollapsed = sidebarState === "collapsed";
 
   const effectiveLocale: Locale =
     localeContext?.effectiveLocale ??
@@ -119,11 +124,11 @@ export function AppSidebar({
   return (
     <Sidebar
       collapsible="icon"
-      className="border-r border-slate-200 dark:border-zinc-800/50 bg-white dark:bg-[#050505] transition-colors duration-300"
+      className="border-r border-slate-200 dark:border-zinc-800/50 bg-white dark:bg-[#050505] transition-colors duration-300 group-data-[collapsible=icon]:w-[4rem]"
     >
       <div className="absolute left-0 top-0 h-64 w-full bg-gradient-to-b from-orange-500/5 to-transparent pointer-events-none" />
 
-      <SidebarHeader className="relative z-10 p-4">
+      <SidebarHeader className="relative z-10 p-4 group-data-[collapsible=icon]:px-4 group-data-[collapsible=icon]:py-3">
         <SidebarMenu>
           <SidebarMenuItem>
             <div className="flex items-center gap-3 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-[#0a0a0a] px-2 py-1.5 transition-colors">
@@ -143,7 +148,7 @@ export function AppSidebar({
         </SidebarMenu>
       </SidebarHeader>
 
-      <SidebarContent className="relative z-10 px-3">
+      <SidebarContent className="relative z-10 px-3 group-data-[collapsible=icon]:px-4">
         <SidebarGroup>
           <SidebarGroupLabel className="mb-3 px-2 text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 dark:text-zinc-600">
             {t("navigation")}
@@ -193,13 +198,21 @@ export function AppSidebar({
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="relative z-10 flex flex-col gap-2 border-t border-slate-200 dark:border-zinc-800/50 bg-slate-50/50 dark:bg-[#070707]/50 p-4">
+      <SidebarFooter className="relative z-10 flex flex-col gap-2 border-t border-slate-200 dark:border-zinc-800/50 bg-slate-50/50 dark:bg-[#070707]/50 p-4 group-data-[collapsible=icon]:px-4 group-data-[collapsible=icon]:gap-3 group-data-[collapsible=icon]:pb-3">
         {/* Theme */}
-        <div className="mb-2 flex items-center justify-between rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-100/50 dark:bg-zinc-900/50 px-2 py-1">
-          <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-500">
-            {t("appearance")}
-          </span>
-          <div className="flex gap-1">
+        <div
+          className={
+            isCollapsed
+              ? "flex justify-center rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-100/50 dark:bg-zinc-900/50 p-2"
+              : "mb-2 flex items-center justify-between rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-100/50 dark:bg-zinc-900/50 px-2 py-1"
+          }
+        >
+          {!isCollapsed && (
+            <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-500">
+              {t("appearance")}
+            </span>
+          )}
+          <div className="flex gap-1.5">
             <button
               type="button"
               onClick={() => handleThemeChange("light")}
@@ -227,98 +240,162 @@ export function AppSidebar({
           </div>
         </div>
 
-        {/* Locale */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              className="flex w-full items-center justify-between rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-100/50 dark:bg-zinc-900/50 px-2 py-1.5 text-left transition-colors hover:bg-slate-200/50 dark:hover:bg-zinc-800/50"
-            >
-              <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-500">
-                {tLocale("label")}
-              </span>
-              <span className="text-[10px] font-mono font-bold uppercase text-slate-700 dark:text-zinc-300">
-                {tLocale(effectiveLocale)}
-              </span>
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="start"
-            side="top"
-            className="w-40 border-slate-200 bg-white dark:border-zinc-800 dark:bg-[#0a0a0a]"
-          >
-            {LOCALES.map((loc) => (
-              <DropdownMenuItem
-                key={loc}
-                onClick={() => handleLocaleSelect(loc)}
-                className={`cursor-pointer text-xs ${
-                  effectiveLocale === loc
-                    ? "bg-orange-500/10 font-medium text-orange-600 dark:text-orange-500"
-                    : ""
-                }`}
+        {/* Locale - only render Dropdown after mount to avoid Radix ID hydration mismatch */}
+        {mounted ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                title={tLocale("label")}
+                className={
+                  isCollapsed
+                    ? "flex size-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-100/50 dark:bg-zinc-900/50 text-slate-600 dark:text-zinc-300 transition-colors hover:bg-slate-200/50 dark:hover:bg-zinc-800/50"
+                    : "flex w-full items-center justify-between rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-100/50 dark:bg-zinc-900/50 px-2 py-1.5 text-left transition-colors hover:bg-slate-200/50 dark:hover:bg-zinc-800/50"
+                }
               >
-                {tLocale(loc)}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+                {isCollapsed ? (
+                  <Globe className="size-4 shrink-0" />
+                ) : (
+                  <>
+                    <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-500">
+                      {tLocale("label")}
+                    </span>
+                    <span className="text-[10px] font-mono font-bold uppercase text-slate-700 dark:text-zinc-300">
+                      {tLocale(effectiveLocale)}
+                    </span>
+                  </>
+                )}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="start"
+              side="top"
+              className="w-40 border-slate-200 bg-white dark:border-zinc-800 dark:bg-[#0a0a0a]"
+            >
+              {LOCALES.map((loc) => (
+                <DropdownMenuItem
+                  key={loc}
+                  onClick={() => handleLocaleSelect(loc)}
+                  className={`cursor-pointer text-xs ${
+                    effectiveLocale === loc
+                      ? "bg-orange-500/10 font-medium text-orange-600 dark:text-orange-500"
+                      : ""
+                  }`}
+                >
+                  {tLocale(loc)}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <div
+            className={
+              isCollapsed
+                ? "flex size-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-100/50 dark:bg-zinc-900/50 text-slate-600 dark:text-zinc-300"
+                : "flex w-full items-center justify-between rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-100/50 dark:bg-zinc-900/50 px-2 py-1.5"
+            }
+            aria-hidden
+          >
+            {isCollapsed ? (
+              <Globe className="size-4 shrink-0" />
+            ) : (
+              <>
+                <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-500">
+                  {tLocale("label")}
+                </span>
+                <span className="text-[10px] font-mono font-bold uppercase text-slate-700 dark:text-zinc-300">
+                  {tLocale(effectiveLocale)}
+                </span>
+              </>
+            )}
+          </div>
+        )}
 
-        {/* User + Logout */}
+        {/* User + Logout - only render Dropdown after mount to avoid Radix ID hydration mismatch */}
         <SidebarMenu>
           <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuButton
-                  size="lg"
-                  className="w-full justify-start border border-transparent transition-all hover:border-slate-300 hover:bg-slate-200 dark:hover:border-zinc-800 dark:hover:bg-zinc-900"
+            {mounted ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <SidebarMenuButton
+                    size="lg"
+                    className="w-full justify-start border border-transparent transition-all hover:border-slate-300 hover:bg-slate-200 dark:hover:border-zinc-800 dark:hover:bg-zinc-900"
+                  >
+                    <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-orange-500/20 bg-orange-500/5 p-0.5 shadow-sm">
+                      {avatarUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={avatarUrl}
+                          alt=""
+                          className="size-full rounded-full object-cover"
+                        />
+                      ) : (
+                        <User className="size-4 text-orange-500" />
+                      )}
+                    </div>
+                    <div className="flex min-w-0 flex-col gap-0.5 leading-none overflow-hidden">
+                      <span className="truncate text-xs font-bold text-slate-900 dark:text-zinc-200">
+                        {displayName}
+                      </span>
+                      <span className="text-[9px] font-mono text-slate-500 dark:text-zinc-500">
+                        {roleLabel}
+                      </span>
+                    </div>
+                    <ShieldCheck className="ml-auto size-3 text-orange-500 opacity-50" />
+                  </SidebarMenuButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="start"
+                  side="right"
+                  className="w-56 border-slate-200 bg-white dark:border-zinc-800 dark:bg-[#0a0a0a]"
                 >
-                  <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-orange-500/20 bg-orange-500/5 p-0.5 shadow-sm">
-                    {avatarUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={avatarUrl}
-                        alt=""
-                        className="size-full rounded-full object-cover"
-                      />
-                    ) : (
-                      <User className="size-4 text-orange-500" />
-                    )}
-                  </div>
-                  <div className="flex min-w-0 flex-col gap-0.5 leading-none overflow-hidden">
-                    <span className="truncate text-xs font-bold text-slate-900 dark:text-zinc-200">
-                      {displayName}
-                    </span>
-                    <span className="text-[9px] font-mono text-slate-500 dark:text-zinc-500">
-                      {roleLabel}
-                    </span>
-                  </div>
-                  <ShieldCheck className="ml-auto size-3 text-orange-500 opacity-50" />
-                </SidebarMenuButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="start"
-                side="right"
-                className="w-56 border-slate-200 bg-white dark:border-zinc-800 dark:bg-[#0a0a0a]"
+                  <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-500">
+                    {t("accountManagement")}
+                  </DropdownMenuLabel>
+                  <DropdownMenuItem asChild className="cursor-pointer gap-2 text-xs focus:bg-orange-500/10 focus:text-orange-600 dark:focus:text-orange-500">
+                    <Link href="/dashboard/settings">
+                      <User className="size-4" />
+                      {t("myProfile")}
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="bg-slate-200 dark:bg-zinc-800" />
+                  <DropdownMenuItem
+                    onClick={() => void handleLogout()}
+                    className="cursor-pointer gap-2 text-xs font-bold text-red-600 focus:bg-red-500/10 focus:text-red-600 dark:text-red-500 dark:focus:text-red-500"
+                  >
+                    <LogOut className="size-4" />
+                    {t("endSession")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <div
+                className="flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm border border-transparent"
+                aria-hidden
               >
-                <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-zinc-500">
-                  {t("accountManagement")}
-                </DropdownMenuLabel>
-                <DropdownMenuItem asChild className="cursor-pointer gap-2 text-xs focus:bg-orange-500/10 focus:text-orange-600 dark:focus:text-orange-500">
-                  <Link href="/dashboard/settings">
-                    <User className="size-4" />
-                    {t("myProfile")}
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-slate-200 dark:bg-zinc-800" />
-                <DropdownMenuItem
-                  onClick={() => void handleLogout()}
-                  className="cursor-pointer gap-2 text-xs font-bold text-red-600 focus:bg-red-500/10 focus:text-red-600 dark:text-red-500 dark:focus:text-red-500"
-                >
-                  <LogOut className="size-4" />
-                  {t("endSession")}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-orange-500/20 bg-orange-500/5 p-0.5 shadow-sm">
+                  {avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={avatarUrl}
+                      alt=""
+                      className="size-full rounded-full object-cover"
+                    />
+                  ) : (
+                    <User className="size-4 text-orange-500" />
+                  )}
+                </div>
+                <div className="flex min-w-0 flex-col gap-0.5 leading-none overflow-hidden">
+                  <span className="truncate text-xs font-bold text-slate-900 dark:text-zinc-200">
+                    {displayName}
+                  </span>
+                  <span className="text-[9px] font-mono text-slate-500 dark:text-zinc-500">
+                    {roleLabel}
+                  </span>
+                </div>
+                <ShieldCheck className="ml-auto size-3 text-orange-500 opacity-50" />
+              </div>
+            )}
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
