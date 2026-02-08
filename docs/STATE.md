@@ -1,6 +1,6 @@
-# BurnWatch – STATE (Milestone 02 concluído e funcional)
+# BurnWatch – STATE (Milestone 04 concluído)
 
-Este documento resume o estado atual da base de código após a conclusão do **Milestone 02: Organization & Member System**. Inclui: sistema de convites (magic links), RBAC (Owner, Admin, Member), tema light/dark, shadcn, **i18n pt/en/es** com troca instantânea, **tela de Configurações com redesign e regras por role**, **APIs de organização (PATCH nome, DELETE com limpeza de auth)**, modal de confirmação ao eliminar organização e botão de guardar desativado quando não há alterações. Inclui também o polimento do produto público (landing, login, copy transcultural, favicon e logo). Serve como contexto para outras AIs (ex.: Gemini) continuarem o trabalho.
+Este documento resume o estado atual da base de código após a conclusão do **Milestone 04: The Adapter Engine (Vercel Implementation)**. Inclui Milestones 01–03 (auth, organizações, membros, i18n, Configurações, **Conexões Cloud** com CRUD, credenciais encriptadas, status de sync) e, além disso: **motor de ingestão real** em `src/modules/adapter-engine` (ICloudProvider, VercelProvider com Billing API, SyncService, DailySpend por `cloudAccountId`), tratamento de erro 403/token inválido (chave `vercel-forbidden-error-sync` + traduções + tooltip), UX de estado “A sincronizar…” com prioridade e limpeza ao receber resposta, e validação de token Vercel em formato alfanumérico (ex. `R1O1lKO7v8L0svh4dTbw6pfu`). Serve como contexto para outras AIs continuarem o trabalho.
 
 ---
 
@@ -50,26 +50,29 @@ Arquivo: `prisma/schema.prisma`
       - `provider: CloudProvider` (enum: `AWS | VERCEL | GCP | OTHER`).
       - `label: String` (ex.: “Prod AWS”).
       - `encryptedCredentials: String @map("encrypted_credentials")` – payload criptografado (AES‑256‑GCM).
+      - `status: CloudAccountStatus` (enum: `SYNCED | SYNCING | SYNC_ERROR`, default `SYNCED`).
+      - `lastSyncError: String?`, `lastSyncedAt: DateTime?`.
       - `metadata: Json?`.
     - Índices:
       - `@@index([organizationId], name: "cloud_account_org_idx")`.
   - `DailySpend`
-    - Tabela agregada de gasto diário.
+    - Tabela agregada de gasto diário, **por conta cloud**.
     - Campos:
       - `organizationId: String @db.Uuid @map("organization_id")`.
+      - `cloudAccountId: String @db.Uuid @map("cloud_account_id")` – conta que originou o gasto.
       - `date: DateTime @map("date")`.
       - `provider: CloudProvider`.
       - `serviceName: String @map("service_name")`.
       - `amountCents: Int @map("amount_cents")` – **SEM floats**.
       - `currency: String? @default("USD")`.
     - Índices:
-      - **Índice único composto para idempotência de sync**  
-        `@@unique([organizationId, provider, serviceName, date], name: "daily_spend_org_provider_service_date_unique")`.
-      - Índice de consulta rápida:  
+      - **Índice único composto para idempotência de sync por conta**  
+        `@@unique([organizationId, cloudAccountId, provider, serviceName, date], name: "daily_spend_org_provider_service_date_account_unique")`.
+      - Índice de consulta:  
         `@@index([organizationId, date], name: "daily_spend_org_date_idx")`.
 
 > Observação: o índice único gera em Prisma o campo  
-> `daily_spend_org_provider_service_date_unique` dentro de `DailySpendWhereUniqueInput`. Isso é usado na camada de serviço para `upsert`.
+> `daily_spend_org_provider_service_date_account_unique` dentro de `DailySpendWhereUniqueInput`. Usado no `upsert` do sync por conta.
 
 ---
 
@@ -251,7 +254,7 @@ Arquivo: `src/app/onboarding/page.tsx`
 
 ### 7.1. Billing / DailySpend
 
-#### DailySpendService (idempotência via índice composto)
+#### DailySpendService (idempotência via índice composto por conta)
 
 Arquivo: `src/modules/billing/application/dailySpendService.ts`
 
@@ -259,6 +262,7 @@ Arquivo: `src/modules/billing/application/dailySpendService.ts`
   ```ts
   export interface UpsertDailySpendInput {
     organizationId: string;
+    cloudAccountId: string;
     date: Date;
     provider: CloudProvider;
     serviceName: string;
@@ -274,8 +278,9 @@ Arquivo: `src/modules/billing/application/dailySpendService.ts`
   ) {
     return prisma.dailySpend.upsert({
       where: {
-        daily_spend_org_provider_service_date_unique: {
+        daily_spend_org_provider_service_date_account_unique: {
           organizationId,
+          cloudAccountId,
           provider,
           serviceName,
           date,
@@ -286,7 +291,7 @@ Arquivo: `src/modules/billing/application/dailySpendService.ts`
     });
   }
   ```
-- Garante que múltiplos syncs com o mesmo `(org, provider, service, date)` apenas atualizam o registro existente (idempotência de ingestão).
+- Garante que múltiplos syncs com o mesmo `(org, cloudAccount, provider, service, date)` apenas atualizam o registro existente (idempotência de ingestão por conta).
 
 ---
 
@@ -318,15 +323,26 @@ Casos cobertos:
 
 ### Teste do comportamento de idempotência em DailySpend
 
-Arquivo: `src/services/dailySpendService.test.ts`
+Arquivo: `src/modules/billing/application/dailySpendService.test.ts`
 
 - Usa `vi.fn()` para mockar `prisma.dailySpend.upsert`.
-- Chama `upsertDailySpend(prismaMock, input)` duas vezes com os mesmos dados.
-- Verifica:
-  - `upsert` foi chamado 2 vezes.
-  - O primeiro call recebeu `where: { daily_spend_org_provider_service_date_unique: { ... } }` – ou seja, o índice composto correto está sendo usado como chave única.
+- Chama `upsertDailySpend(prismaMock, input)` com `cloudAccountId`; verifica uso do índice `daily_spend_org_provider_service_date_account_unique`.
 
-Resultado atual: `pnpm test` passa com **2 test files / 6 testes**.
+### Módulo cloud-provider-credentials
+
+- **Validadores** (`src/modules/cloud-provider-credentials/util/cloud-credentials.ts`): validação só de formato para AWS (Access Key ID AKIA + 16 alfanuméricos, Secret 40 chars), **Vercel (token ≥ 16 chars; aceita formato com prefixo `v_tok_`/`vercel_` ou alfanumérico puro, ex. `R1O1lKO7v8L0svh4dTbw6pfu`)**, GCP (billing ID `012345-ABCDEF`, JSON com `type`, `private_key`, `client_email`). `validateCredentials`, `credentialsToPlaintext`. Testes em `util/cloud-credentials.test.ts`.
+- **Serviço** (`src/modules/cloud-provider-credentials/application/cloudCredentialsService.ts`): `listAccounts`, `createAccount` (valida, encripta, grava), `updateLabel`, `syncAccount` (delega ao adapter-engine), `deleteAccount`. Erros: `CloudCredentialsError`, `CloudCredentialsNotFoundError`, `CloudCredentialsValidationError`. Testes em `cloudCredentialsService.test.ts`.
+- **APIs** (orquestradoras): `GET/POST /api/cloud-accounts`, `PATCH /api/cloud-accounts/[id]` (label), `POST /api/cloud-accounts/[id]` (sync – chama SyncService do adapter-engine); resolvem utilizador/org via `profileService`.
+
+### Módulo adapter-engine (Milestone 04)
+
+- **Domínio** (`src/modules/adapter-engine/domain/cloudProvider.ts`): interface `ICloudProvider` (`fetchDailySpend(cloudAccount, range)`), tipos `DailySpendData`, `FetchRange`, constante `SYNC_ERROR_VERCEL_FORBIDDEN` e classe `SyncErrorWithKey` para erros com chave armazenável em `lastSyncError`.
+- **VercelProvider** (`src/modules/adapter-engine/infrastructure/providers/vercelProvider.ts`): integração real com Vercel Billing API (`GET /v1/billing/charges`), desencriptação do token, resposta JSONL normalizada para `amountCents` e `serviceName`; em 403 com `invalidToken`/“Not authorized” lança `SyncErrorWithKey` com chave `vercel-forbidden-error-sync`.
+- **MockProvider** (`src/modules/adapter-engine/infrastructure/providers/mockProvider.ts`): retorna `[]` para AWS/GCP (placeholder até implementação real).
+- **SyncService** (`src/modules/adapter-engine/application/syncService.ts`): orquestra sync por conta (SYNCING → provider.fetchDailySpend → upsert DailySpend com `cloudAccountId` → SYNCED ou SYNC_ERROR com `lastSyncError` = chave ou mensagem). Em erro do tipo `SyncErrorWithKey` grava a chave em `lastSyncError` para tradução na UI.
+- **Conexões (UI):** Em SYNC_ERROR com `lastSyncError`, tooltip na célula de estado mostra mensagem traduzida (chave `syncErrorVercelForbidden` em pt/en/es) ou texto bruto. Estado “A sincronizar…” tem prioridade (mostrado assim que o utilizador clica em sync); `syncingIds` é limpo ao receber resposta da API. Token Vercel aceite em formato alfanumérico na validação do formulário.
+
+Resultado atual: `pnpm test` passa com todos os testes (incl. encryption, dailySpend, organizations, cloud-provider-credentials, adapter-engine syncService).
 
 ---
 
@@ -386,5 +402,9 @@ Comparado à descrição em `docs/sprints/SPRINT_01.md` (Milestone 2), o que foi
 
 **Conclusão Milestone 02:** Todo o comportamento da Milestone 02 está concluído e funcional: convites por magic link, onboarding, gestão de membros com RBAC, preferências de tema/idioma (pt, en, es) com troca instantânea, UI adaptada ao tema, landing pública i18n com copy transcultural e preços por idioma, **tela de Configurações com redesign (estilo Gemini), regras por role (OWNER/ADMIN/MEMBER), atualização e eliminação total da organização (incluindo auth dos membros no Supabase), modal de confirmação ao eliminar e botão Guardar desativado quando não há alterações**.
 
-**Próximo passo – Milestone 3: Credential Management UI (CRUD)** (cf. `docs/sprints/SPRINT_01.md`): criar a interface onde o utilizador conecta as suas nuvens de forma segura: telas de conexão para adicionar CloudAccount (Vercel, AWS, GCP); usar o EncryptionService já existente para encriptar os tokens no save; UX de feedback com status "Ligado" (placeholder até ao Sync Engine) e permitir renomear/remover contas.
+**Milestone 03 concluído – Credential Management UI (CRUD):** Página Conexões em `/dashboard/connections`; CRUD de CloudAccounts (Vercel, AWS, GCP) com credenciais encriptadas; módulo `cloud-provider-credentials` (validadores + `cloudCredentialsService`); status por conta e Sync Health; APIs como orquestradoras; testes unitários para validadores e serviço.
+
+**Milestone 04 concluído – The Adapter Engine (Vercel Implementation):** Módulo `adapter-engine` com ICloudProvider, VercelProvider (Billing API real), SyncService e DailySpend por `cloudAccountId`; POST `/api/cloud-accounts/[id]` para sync; tratamento de 403/token inválido (chave `vercel-forbidden-error-sync` + traduções + tooltip); UX de estado “A sincronizar…” com prioridade e limpeza ao receber resposta; validação de token Vercel em formato alfanumérico (mín. 16 caracteres).
+
+**Próximo passo – Milestone 5: The "Aha!" Dashboard** (cf. `docs/sprints/SPRINT_01.md`): ligar DailySpend real aos gráficos, projeção (regressão linear), deteção de anomalia, polimento final.
 

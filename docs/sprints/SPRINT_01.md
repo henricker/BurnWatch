@@ -26,28 +26,40 @@ Construir a "Steel Thread" técnica do BurnWatch: desde a autenticação e gest�
 
 ---
 
-## 🏗 Milestone 3: Credential Management UI (CRUD)
+## ✅ Milestone 3: Credential Management UI (CRUD)
+
+**Status:** Concluído
 
 **Objetivo:** Criar a interface onde o utilizador "conecta" as suas nuvens de forma segura.
 
-### Requisitos Técnicos
+### Entregues
 
-- **Telas de Conexão:** Interface para adicionar CloudAccount (Vercel, AWS, GCP).
-- **Segurança Prática:** Utilizar o EncryptionService já criado para encriptar os tokens no momento do save.
-- **UX de Feedback:** Mostrar status de "Ligado" (placeholder até ao Sync Engine) e permitir renomear/remover contas.
+- **Telas de Conexão:** Página `/dashboard/connections` com lista de CloudAccounts, modal para adicionar (Vercel, AWS, GCP), validação de formato de credenciais (sem chamadas a APIs externas).
+- **Segurança:** EncryptionService para encriptar credenciais (AES-256-GCM) no save; credenciais nunca em claro.
+- **UX de Feedback:** Status por conta (Sincronizado / Sincronizando / Erro), último sync (`lastSyncedAt`), Sync Health dinâmico; renomear rótulo (PATCH), eliminar com confirmação, botão de sync manual (mock).
+- **Backend em módulos:** Módulo `cloud-provider-credentials` com `util/cloud-credentials` (validadores), `application/cloudCredentialsService` (list/create/updateLabel/sync/delete); APIs como orquestradoras; testes unitários para validadores e serviço.
+- **Schema:** Enum `CloudAccountStatus` (SYNCED, SYNCING, SYNC_ERROR); campos `status`, `lastSyncError`, `lastSyncedAt` em `CloudAccount`.
+- **i18n:** Namespace `Connections` (pt, en, es); item "Conexões" na sidebar.
 
 ---
 
-## 🧩 Milestone 4: The Adapter Engine (Vercel Implementation)
+## ✅ Milestone 4: The Adapter Engine (Vercel Implementation)
+
+**Status:** Concluído
 
 **Objetivo:** O motor técnico para buscar os gastos reais, dependente das credenciais do M3.
 
-### Requisitos Técnicos
+### Entregues
 
-- **Contract:** Interface ICloudProvider para garantir extensibilidade para outros providers futuramente.
-- **Vercel Adapter:** Integração real com a Vercel Billing API.
-- **Normalization:** Mapear a resposta para o schema DailySpend usando apenas inteiros (amountCents).
-- **Idempotência:** Garantir que o sync de dados diários não duplique registros via upsert.
+- **Contract:** Interface `ICloudProvider` em `src/modules/adapter-engine/domain/cloudProvider.ts`; tipos `DailySpendData`, `FetchRange`; erros com chave (`SyncErrorWithKey`, `SYNC_ERROR_VERCEL_FORBIDDEN`) para armazenar em `lastSyncError`.
+- **Vercel Adapter:** `VercelProvider` em `src/modules/adapter-engine/infrastructure/providers/vercelProvider.ts` – integração real com Vercel Billing API (`GET /v1/billing/charges`), desencriptação do token, resposta JSONL normalizada para `amountCents` e `serviceName`.
+- **Tratamento 403 / token inválido:** Em 403 com `invalidToken` ou “Not authorized”, lança `SyncErrorWithKey`; `SyncService` grava a chave `vercel-forbidden-error-sync` em `lastSyncError`; traduções (pt, en, es) e tooltip na célula de estado em Connections para mensagem amigável.
+- **Normalization:** Mapeamento para `DailySpend` com `amountCents` (inteiros); `DailySpend` com `cloudAccountId` e índice único `daily_spend_org_provider_service_date_account_unique`.
+- **Idempotência:** Upsert por `(organizationId, cloudAccountId, provider, serviceName, date)`; `dailySpendService` e testes atualizados para `cloudAccountId`.
+- **SyncService:** Orquestração (SYNCING → provider → upsert → SYNCED ou SYNC_ERROR); `POST /api/cloud-accounts/[id]` para sync manual.
+- **UX:** Estado “A sincronizar…” com prioridade sobre erro anterior; limpeza de `syncingIds` ao receber resposta da API; tooltip de erro traduzido em SYNC_ERROR.
+- **Validação Vercel:** Token aceite em formato alfanumérico (ex. `R1O1lKO7v8L0svh4dTbw6pfu`), mínimo 16 caracteres.
+- **MockProvider:** Placeholder para AWS/GCP (retorna `[]`) até implementação futura.
 
 ---
 
