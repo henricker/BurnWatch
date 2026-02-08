@@ -1,5 +1,9 @@
 import { type PrismaClient, Role } from "@prisma/client";
 
+export interface CompleteOnboardingResult {
+  locale: string | null;
+}
+
 export async function completeOnboarding(
   prisma: PrismaClient,
   params: {
@@ -9,7 +13,7 @@ export async function completeOnboarding(
     lastName?: string;
     avatarPath?: string | null;
   },
-): Promise<void> {
+): Promise<CompleteOnboardingResult> {
   const { userId, organizationName, firstName, lastName, avatarPath } = params;
 
   const name = organizationName.trim();
@@ -19,23 +23,20 @@ export async function completeOnboarding(
 
   // Prevent duplicate onboarding: if user already has a profile, just no-op.
   const existingProfile = await prisma.profile.findFirst({
-    where: {
-      userId,
-    },
+    where: { userId },
+    select: { locale: true },
   });
 
   if (existingProfile) {
-    return;
+    return { locale: existingProfile.locale ?? null };
   }
 
-  await prisma.$transaction(async (tx) => {
+  const created = await prisma.$transaction(async (tx) => {
     const organization = await tx.organization.create({
-      data: {
-        name,
-      },
+      data: { name },
     });
 
-    await tx.profile.create({
+    const profile = await tx.profile.create({
       data: {
         userId,
         organizationId: organization.id,
@@ -45,6 +46,9 @@ export async function completeOnboarding(
         avatarPath: avatarPath ?? null,
       },
     });
+    return profile;
   });
+
+  return { locale: created.locale ?? null };
 }
 

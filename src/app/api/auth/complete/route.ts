@@ -45,13 +45,8 @@ export async function GET(request: Request) {
   });
 
   const response = NextResponse.json(result);
-  if (result.next === "/dashboard") {
-    const profile = await prisma.profile.findFirst({
-      where: { userId: user.id },
-      select: { locale: true },
-    });
-    setLocaleCookie(response, profile?.locale ?? undefined);
+  if (result.next === "/dashboard" && result.locale != null) {
+    setLocaleCookie(response, result.locale);
   }
   return response;
 }
-

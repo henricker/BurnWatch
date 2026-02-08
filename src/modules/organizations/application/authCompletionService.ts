@@ -4,6 +4,19 @@ export type NextDestination = "/dashboard" | "/onboarding";
 
 export interface CompleteAuthResult {
   next: NextDestination;
+  /** Set when next is /dashboard so the caller can set locale cookie. */
+  locale?: string | null;
+}
+
+async function getProfileLocale(
+  prisma: PrismaClient,
+  userId: string,
+): Promise<string | null> {
+  const profile = await prisma.profile.findFirst({
+    where: { userId },
+    select: { locale: true },
+  });
+  return profile?.locale ?? null;
 }
 
 export async function completeAuthForUser(
@@ -39,7 +52,8 @@ export async function completeAuthForUser(
       await prisma.organizationInvite.delete({
         where: { id: invite.id },
       });
-      return { next: "/dashboard" };
+      const locale = await getProfileLocale(prisma, userId);
+      return { next: "/dashboard", locale };
     }
 
     // Accept invite atomically: create Profile and delete invite.
@@ -59,7 +73,8 @@ export async function completeAuthForUser(
       });
     });
 
-    return { next: "/dashboard" };
+    const locale = await getProfileLocale(prisma, userId);
+    return { next: "/dashboard", locale };
   }
 
   // 2) No invite: check if user already has a profile in any organization.
@@ -70,7 +85,8 @@ export async function completeAuthForUser(
   });
 
   if (existingProfile) {
-    return { next: "/dashboard" };
+    const locale = await getProfileLocale(prisma, userId);
+    return { next: "/dashboard", locale };
   }
 
   return { next: "/onboarding" };

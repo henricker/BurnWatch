@@ -11,6 +11,7 @@ import {
   CloudCredentialsError,
   CloudCredentialsValidationError,
 } from "@/modules/cloud-provider-credentials/application/cloudCredentialsService";
+import { getProfileByUserId } from "@/modules/organizations/application/profileService";
 
 /**
  * GET: List cloud accounts for the current user's organization.
@@ -26,11 +27,7 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const profile = await prisma.profile.findFirst({
-    where: { userId: user.id },
-    select: { organizationId: true },
-  });
-
+  const profile = await getProfileByUserId(prisma, user.id);
   if (!profile) {
     return NextResponse.json({ error: "Profile not found" }, { status: 404 });
   }
@@ -64,11 +61,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const profile = await prisma.profile.findFirst({
-    where: { userId: user.id },
-    select: { organizationId: true },
-  });
-
+  const profile = await getProfileByUserId(prisma, user.id);
   if (!profile) {
     return NextResponse.json({ error: "Profile not found" }, { status: 404 });
   }

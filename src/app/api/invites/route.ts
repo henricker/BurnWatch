@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { createSupabaseOtpClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createInvite, InviteError } from "@/modules/organizations/application/inviteService";
+import { getProfileByUserAndOrganization } from "@/modules/organizations/application/profileService";
 
 export async function POST(request: Request) {
   const supabase = await createSupabaseServerClient();
@@ -45,12 +46,11 @@ export async function POST(request: Request) {
     );
   }
 
-  const profile = await prisma.profile.findFirst({
-    where: {
-      userId: user.id,
-      organizationId,
-    },
-  });
+  const profile = await getProfileByUserAndOrganization(
+    prisma,
+    user.id,
+    organizationId,
+  );
 
   if (!profile) {
     return NextResponse.json(

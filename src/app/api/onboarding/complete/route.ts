@@ -40,25 +40,22 @@ export async function POST(request: Request) {
   }
 
   try {
-    await completeOnboarding(prisma, {
+    const result = await completeOnboarding(prisma, {
       userId: user.id,
       organizationName: body.name,
       firstName: body.firstName,
       lastName: body.lastName,
       avatarPath: body.avatarPath ?? null,
     });
+
+    const response = NextResponse.json({ ok: true });
+    if (result.locale != null) {
+      setLocaleCookie(response, result.locale);
+    }
+    return response;
   } catch (error: unknown) {
     const message =
       error instanceof Error ? error.message : "Failed to complete onboarding.";
     return NextResponse.json({ error: message }, { status: 400 });
   }
-
-  const profile = await prisma.profile.findFirst({
-    where: { userId: user.id },
-    select: { locale: true },
-  });
-  const response = NextResponse.json({ ok: true });
-  setLocaleCookie(response, profile?.locale ?? undefined);
-  return response;
 }
-

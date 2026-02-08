@@ -1,9 +1,15 @@
 import { NextResponse } from "next/server";
 
-import { prisma } from "@/lib/prisma";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { canDeleteOrganization, canUpdateOrganizationName } from "@/lib/roles";
+import {
+  updateOrganizationName,
+  deleteOrganization,
+  OrganizationError,
+  OrganizationNotFoundError,
+  OrganizationForbiddenError,
+} from "@/modules/organizations/application/organizationService";
+import { prisma } from "@/lib/prisma";
 
 /**
  * PATCH: Update organization name. Requires OWNER or ADMIN.
@@ -36,35 +42,28 @@ export async function PATCH(request: Request) {
     );
   }
 
-  const profile = await prisma.profile.findFirst({
-    where: { userId: user.id },
-    include: { organization: true },
-  });
-
-  if (!profile) {
-    return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+  try {
+    await updateOrganizationName(prisma, user.id, name);
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    if (err instanceof OrganizationNotFoundError) {
+      return NextResponse.json({ error: err.message }, { status: 404 });
+    }
+    if (err instanceof OrganizationForbiddenError) {
+      return NextResponse.json({ error: err.message }, { status: 403 });
+    }
+    if (err instanceof OrganizationError) {
+      return NextResponse.json({ error: err.message }, { status: 400 });
+    }
+    throw err;
   }
-
-  if (!canUpdateOrganizationName(profile.role)) {
-    return NextResponse.json(
-      { error: "Only Owner or Admin can update organization name" },
-      { status: 403 },
-    );
-  }
-
-  await prisma.organization.update({
-    where: { id: profile.organizationId },
-    data: { name },
-  });
-
-  return NextResponse.json({ ok: true });
 }
 
 /**
  * DELETE: Delete the organization and all related data. Only OWNER.
  * Deletes all members' Supabase Auth users, then the organization (cascade).
  */
-export async function DELETE(request: Request) {
+export async function DELETE(_request: Request) {
   const supabase = await createSupabaseServerClient();
 
   const {
@@ -76,42 +75,23 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const profile = await prisma.profile.findFirst({
-    where: { userId: user.id },
-    include: { organization: true },
-  });
-
-  if (!profile) {
-    return NextResponse.json({ error: "Profile not found" }, { status: 404 });
-  }
-
-  if (!canDeleteOrganization(profile.role)) {
-    return NextResponse.json(
-      { error: "Only the organization owner can delete it" },
-      { status: 403 },
-    );
-  }
-
-  const organizationId = profile.organizationId;
-
-  // All profiles in this org (to delete their auth users)
-  const members = await prisma.profile.findMany({
-    where: { organizationId },
-    select: { userId: true },
-  });
-
   const admin = createSupabaseAdminClient();
-  if (admin) {
-    for (const { userId } of members) {
-      await admin.auth.admin.deleteUser(userId).catch((err) => {
-        console.error("[DELETE /api/organization] deleteUser failed:", userId, err);
-      });
+
+  try {
+    await deleteOrganization(prisma, user.id, {
+      supabaseAdmin: admin ?? undefined,
+    });
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    if (err instanceof OrganizationNotFoundError) {
+      return NextResponse.json({ error: err.message }, { status: 404 });
     }
+    if (err instanceof OrganizationForbiddenError) {
+      return NextResponse.json({ error: err.message }, { status: 403 });
+    }
+    if (err instanceof OrganizationError) {
+      return NextResponse.json({ error: err.message }, { status: 400 });
+    }
+    throw err;
   }
-
-  await prisma.organization.delete({
-    where: { id: organizationId },
-  });
-
-  return NextResponse.json({ ok: true });
 }

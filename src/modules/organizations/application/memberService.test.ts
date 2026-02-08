@@ -109,7 +109,7 @@ describe("removeMember", () => {
     expect(prisma.profile.delete).not.toHaveBeenCalled();
   });
 
-  it("deletes profile when OWNER removes a MEMBER", async () => {
+  it("deletes profile when OWNER removes a MEMBER and returns removedUserId", async () => {
     const deleteProfile = vi.fn().mockResolvedValue(undefined);
     const prisma = createPrismaMock({
       targetProfile: {
@@ -128,14 +128,15 @@ describe("removeMember", () => {
       deleteProfile,
     });
 
-    await removeMember(prisma, { requesterUserId, profileIdToRemove });
+    const result = await removeMember(prisma, { requesterUserId, profileIdToRemove });
 
+    expect(result).toEqual({ removedUserId: "member-uuid" });
     expect(deleteProfile).toHaveBeenCalledWith({
       where: { id: profileIdToRemove },
     });
   });
 
-  it("deletes profile when ADMIN removes a MEMBER", async () => {
+  it("deletes profile when ADMIN removes a MEMBER and returns removedUserId", async () => {
     const deleteProfile = vi.fn().mockResolvedValue(undefined);
     const prisma = createPrismaMock({
       targetProfile: {
@@ -154,8 +155,9 @@ describe("removeMember", () => {
       deleteProfile,
     });
 
-    await removeMember(prisma, { requesterUserId, profileIdToRemove });
+    const result = await removeMember(prisma, { requesterUserId, profileIdToRemove });
 
+    expect(result).toEqual({ removedUserId: "member-uuid" });
     expect(deleteProfile).toHaveBeenCalledWith({
       where: { id: profileIdToRemove },
     });

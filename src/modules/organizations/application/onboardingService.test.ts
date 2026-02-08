@@ -36,12 +36,13 @@ describe("completeOnboarding", () => {
     ).rejects.toThrow("Organization name is required.");
   });
 
-  it("is no-op when user already has a profile", async () => {
+  it("is no-op when user already has a profile and returns existing locale", async () => {
     const findFirst = vi.fn().mockResolvedValue({
       id: "existing-profile",
       userId,
       organizationId: "existing-org",
       role: "MEMBER",
+      locale: "en",
     });
     const transactionFn = vi.fn();
 
@@ -50,34 +51,38 @@ describe("completeOnboarding", () => {
       $transaction: transactionFn,
     } as unknown as PrismaClient;
 
-    await completeOnboarding(prisma, {
+    const result = await completeOnboarding(prisma, {
       userId,
       organizationName: "New Org",
     });
 
+    expect(result).toEqual({ locale: "en" });
     expect(findFirst).toHaveBeenCalledWith({
       where: { userId },
+      select: { locale: true },
     });
     expect(transactionFn).not.toHaveBeenCalled();
   });
 
-  it("creates organization and profile with OWNER role in a transaction", async () => {
+  it("creates organization and profile with OWNER role in a transaction and returns locale", async () => {
     const findFirst = vi.fn().mockResolvedValue(null);
     const createdOrg = { id: "new-org-id", name: "My Startup" };
-    const orgCreate = vi.fn().mockResolvedValue(createdOrg);
-    const profileCreate = vi.fn().mockResolvedValue({
+    const createdProfile = {
       id: "new-profile-id",
       userId,
       organizationId: createdOrg.id,
       role: "OWNER",
-    });
+      locale: "pt",
+    };
+    const orgCreate = vi.fn().mockResolvedValue(createdOrg);
+    const profileCreate = vi.fn().mockResolvedValue(createdProfile);
 
-    const transactionFn = vi.fn().mockImplementation(async (cb: (tx: unknown) => Promise<void>) => {
+    const transactionFn = vi.fn().mockImplementation(async (cb: (tx: unknown) => Promise<unknown>) => {
       const tx = {
         organization: { create: orgCreate },
         profile: { create: profileCreate },
       };
-      await cb(tx);
+      return await cb(tx);
     });
 
     const prisma = {
@@ -85,13 +90,14 @@ describe("completeOnboarding", () => {
       $transaction: transactionFn,
     } as unknown as PrismaClient;
 
-    await completeOnboarding(prisma, {
+    const result = await completeOnboarding(prisma, {
       userId,
       organizationName: "  My Startup  ",
       firstName: "Jane",
       lastName: "Doe",
     });
 
+    expect(result).toEqual({ locale: "pt" });
     expect(transactionFn).toHaveBeenCalledTimes(1);
     expect(orgCreate).toHaveBeenCalledWith({
       data: { name: "My Startup" },
@@ -112,10 +118,16 @@ describe("completeOnboarding", () => {
     const findFirst = vi.fn().mockResolvedValue(null);
     const createdOrg = { id: "org-1", name: "Trimmed" };
     const orgCreate = vi.fn().mockResolvedValue(createdOrg);
-    const profileCreate = vi.fn().mockResolvedValue({});
+    const profileCreate = vi.fn().mockResolvedValue({
+      id: "p1",
+      userId,
+      organizationId: createdOrg.id,
+      role: "OWNER",
+      locale: "en",
+    });
 
-    const transactionFn = vi.fn().mockImplementation(async (cb: (tx: unknown) => Promise<void>) => {
-      await cb({
+    const transactionFn = vi.fn().mockImplementation(async (cb: (tx: unknown) => Promise<unknown>) => {
+      return await cb({
         organization: { create: orgCreate },
         profile: { create: profileCreate },
       });
@@ -126,12 +138,13 @@ describe("completeOnboarding", () => {
       $transaction: transactionFn,
     } as unknown as PrismaClient;
 
-    await completeOnboarding(prisma, {
+    const result = await completeOnboarding(prisma, {
       userId,
       organizationName: "Trimmed",
       avatarPath: "/bucket/avatar.png",
     });
 
+    expect(result.locale).toBe("en");
     expect(profileCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({
         userId,

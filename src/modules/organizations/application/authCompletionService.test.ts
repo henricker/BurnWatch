@@ -56,7 +56,8 @@ describe("completeAuthForUser", () => {
 
     const result = await completeAuthForUser(prisma, { userId, email });
 
-    expect(result).toEqual({ next: "/dashboard" });
+    expect(result.next).toBe("/dashboard");
+    expect(result.locale).toBeDefined();
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
@@ -92,7 +93,8 @@ describe("completeAuthForUser", () => {
 
     const result = await completeAuthForUser(prisma, { userId, email });
 
-    expect(result).toEqual({ next: "/dashboard" });
+    expect(result.next).toBe("/dashboard");
+    expect(result.locale).toBeDefined();
     expect(findFirstProfileInOrg).toHaveBeenCalledWith({
       where: { userId, organizationId: orgId },
     });
@@ -130,7 +132,8 @@ describe("completeAuthForUser", () => {
 
     const result = await completeAuthForUser(prisma, { userId, email });
 
-    expect(result).toEqual({ next: "/dashboard" });
+    expect(result.next).toBe("/dashboard");
+    expect(result.locale).toBeDefined();
     expect(deleteInvite).toHaveBeenCalledWith({ where: { id: invite.id } });
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });

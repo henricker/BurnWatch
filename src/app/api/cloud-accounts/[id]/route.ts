@@ -10,14 +10,7 @@ import {
   CloudCredentialsValidationError,
   CloudCredentialsError,
 } from "@/modules/cloud-provider-credentials/application/cloudCredentialsService";
-
-async function getOrganizationIdForUser(userId: string): Promise<string | null> {
-  const profile = await prisma.profile.findFirst({
-    where: { userId },
-    select: { organizationId: true },
-  });
-  return profile?.organizationId ?? null;
-}
+import { getProfileByUserId } from "@/modules/organizations/application/profileService";
 
 /**
  * PATCH: Update cloud account label only.
@@ -37,8 +30,8 @@ export async function PATCH(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const organizationId = await getOrganizationIdForUser(user.id);
-  if (!organizationId) {
+  const profile = await getProfileByUserId(prisma, user.id);
+  if (!profile) {
     return NextResponse.json({ error: "Profile not found" }, { status: 404 });
   }
 
@@ -52,7 +45,7 @@ export async function PATCH(
   const label = typeof body.label === "string" ? body.label : "";
 
   try {
-    await updateLabel(prisma, organizationId, accountId, label);
+    await updateLabel(prisma, profile.organizationId, accountId, label);
     return NextResponse.json({ ok: true });
   } catch (err) {
     if (err instanceof CloudCredentialsValidationError) {
@@ -86,13 +79,13 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const organizationId = await getOrganizationIdForUser(user.id);
-  if (!organizationId) {
+  const profile = await getProfileByUserId(prisma, user.id);
+  if (!profile) {
     return NextResponse.json({ error: "Profile not found" }, { status: 404 });
   }
 
   try {
-    const result = await syncAccount(prisma, organizationId, accountId);
+    const result = await syncAccount(prisma, profile.organizationId, accountId);
     return NextResponse.json(result);
   } catch (err) {
     if (err instanceof CloudCredentialsNotFoundError) {
@@ -120,13 +113,13 @@ export async function DELETE(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const organizationId = await getOrganizationIdForUser(user.id);
-  if (!organizationId) {
+  const profile = await getProfileByUserId(prisma, user.id);
+  if (!profile) {
     return NextResponse.json({ error: "Profile not found" }, { status: 404 });
   }
 
   try {
-    await deleteAccount(prisma, organizationId, accountId);
+    await deleteAccount(prisma, profile.organizationId, accountId);
     return NextResponse.json({ ok: true });
   } catch (err) {
     if (err instanceof CloudCredentialsNotFoundError) {

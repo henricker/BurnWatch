@@ -23,15 +23,21 @@ export interface RemoveMemberParams {
   profileIdToRemove: string;
 }
 
+export interface RemoveMemberResult {
+  /** Supabase auth user id of the removed member (for revoking auth). */
+  removedUserId: string;
+}
+
 /**
  * Removes a member from the organization.
  * - Requester must be OWNER or ADMIN in the same org as the target profile.
  * - Cannot remove a profile with role OWNER.
+ * Returns the removed profile's userId so the caller can revoke Supabase Auth.
  */
 export async function removeMember(
   prisma: PrismaClient,
   params: RemoveMemberParams,
-): Promise<void> {
+): Promise<RemoveMemberResult> {
   const { requesterUserId, profileIdToRemove } = params;
 
   const targetProfile = await prisma.profile.findUnique({
@@ -62,7 +68,11 @@ export async function removeMember(
     throw new MemberForbiddenError("Only Owner or Admin can remove members.");
   }
 
+  const removedUserId = targetProfile.userId;
+
   await prisma.profile.delete({
     where: { id: profileIdToRemove },
   });
+
+  return { removedUserId };
 }
