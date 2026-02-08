@@ -1,5 +1,9 @@
 # 🏃‍♂️ Sprint 01: The Core Value Thread (Aha! Moment Foundation)
 
+**✅ Sprint concluída com sucesso.** Todos os milestones 1–5 entregues. Ver [SPRINT_02.md](./SPRINT_02.md) para a próxima sprint.
+
+---
+
 ## 🎯 Objetivo
 
 Construir a "Steel Thread" técnica do BurnWatch: desde a autenticação e gestão de equipas até à ingestão real de dados da Vercel e visualização no dashboard. O objetivo é provar o valor real do produto para que o utilizador esteja pronto para pagar na Sprint 02.
@@ -80,14 +84,13 @@ Construir a "Steel Thread" técnica do BurnWatch: desde a autenticação e gest�
 
 ---
 
-## 📅 Próximos Passos (Sprint 02: Business & Growth)
+## 📅 Próxima Sprint
 
-- Milestone 6: Notification Engine (Discord & Slack Webhooks).
-- Milestone 7: Stripe Integration (BRL R$ 97/197 vs USD $ 49/149).
+→ **[Sprint 02: Multi-Cloud Expansion & Business Readiness](./SPRINT_02.md)** – AWS e GCP adapters, Notification Engine (Slack/Discord), Monetization (Stripe).
 
 ---
 
-## 📈 Tabela de Preços Referencial (Para Implementação na Sprint 02)
+## 📈 Tabela de Preços Referencial (Sprint 02 – Milestone 09)
 
 | Mercado | Starter ($600 Limit) | Pro (Unlimited) | Moeda |
 |---------|----------------------|------------------|-------|

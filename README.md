@@ -46,9 +46,9 @@ Identify "Zombies"—forgotten instances, idle GPUs, and orphaned storage volume
 
 ---
 
-## 📍 Current Status (Sprint 01)
+## 📍 Current Status
 
-**Done:** Milestones 1–5 are complete and functional:
+**Sprint 01 – Concluída com sucesso.** Milestones 1–5 entregues:
 
 - **M1 – Auth & multi-tenancy:** Magic link + GitHub, Supabase + Prisma, RLS.
 - **M2 – Organization & members:** Onboarding, invites, RBAC (Owner/Admin/Member), Settings (profile, org name, delete org), i18n (PT, EN, ES), light/dark theme, landing with transcultural copy and pricing.
@@ -56,9 +56,14 @@ Identify "Zombies"—forgotten instances, idle GPUs, and orphaned storage volume
 - **M4 – Adapter Engine (Vercel):** Real ingestion via Vercel Billing API; SyncService with day-by-day backfill and bulk upsert per day (~73s → ~35s); 403/token error handling with translated tooltips; unified loading state when creating a connection or triggering sync.
 - **M5 – The "Aha!" Dashboard:** Analytics module (`getDashboardAnalytics`) with date ranges (7D, 30D, MTD) and provider filter; `GET /api/analytics`; cost evolution chart (multiple lines per provider when "All"), metric cards (total, forecast, daily burn, status), Resource Breakdown, Spend by Category (Observability & Automation); end-of-month projection (MTD), Z-score anomaly detection; full i18n and unit tests for analytics.
 
-**Next:** **Sprint 02 – Business & Growth:** Notification Engine (Discord & Slack), Stripe integration (BRL R$ 97/197, USD $49/$149).
+**Em foco – Sprint 02: Multi-Cloud Expansion & Business Readiness**
 
-See `docs/sprints/SPRINT_01.md` for the full sprint plan and `docs/STATE.md` for technical context and env setup.
+- **M6 – AWS Integration:** Cost Explorer SDK, IAM billing policy guide, mapping EC2/RDS/S3/Lambda, backfill com lag até 24h.
+- **M7 – GCP Integration:** Cloud Billing API (ou BigQuery export), Service Account JSON encriptado, mapping Cloud Run/GCE/Cloud SQL.
+- **M8 – Notification Engine:** Webhooks por organização (Slack, Discord), Burn do Dia e Alerta de Spike, trigger por anomalia (Z-score > 2).
+- **M9 – Monetization:** Stripe Checkout (Starter R$ 97 / $49, Pro R$ 197 / $149), Usage Guards (soft block), pricing regional (`bw_market`).
+
+Ver [docs/sprints/SPRINT_01.md](docs/sprints/SPRINT_01.md) (histórico) e [docs/sprints/SPRINT_02.md](docs/sprints/SPRINT_02.md) (plano atual). Contexto técnico e env: [docs/STATE.md](docs/STATE.md).
 
 ---
 
