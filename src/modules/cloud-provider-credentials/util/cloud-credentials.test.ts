@@ -66,9 +66,15 @@ describe("validateAwsCredentials", () => {
 });
 
 describe("validateVercelCredentials", () => {
-  it("accepts token with at least 20 characters", () => {
+  it("accepts token with prefix (vercel_... or v_tok_...)", () => {
     expect(
       validateVercelCredentials("vercel_xxxxxxxxxxxxxxxxxxxx"),
+    ).toEqual({ ok: true });
+  });
+
+  it("accepts plain alphanumeric token (e.g. Vercel dashboard format)", () => {
+    expect(
+      validateVercelCredentials("R1O1lKO7v8L0svh4dTbw6pfu"),
     ).toEqual({ ok: true });
   });
 
@@ -78,10 +84,10 @@ describe("validateVercelCredentials", () => {
     if (!result.ok) expect(result.error).toContain("API token is required");
   });
 
-  it("rejects token shorter than 20 characters", () => {
+  it("rejects token shorter than minimum length", () => {
     const result = validateVercelCredentials("short");
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error).toContain("at least 20");
+    if (!result.ok) expect(result.error).toMatch(/at least \d+ characters/);
   });
 });
 

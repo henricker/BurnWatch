@@ -201,7 +201,8 @@
     "failedToLoad": "Falha ao carregar conexões.",
     "failedToCreate": "Falha ao criar conexão.",
     "failedToUpdate": "Falha ao atualizar.",
-    "failedToDelete": "Falha ao eliminar."
+    "failedToDelete": "Falha ao eliminar.",
+    "syncErrorVercelForbidden": "Token Vercel inválido ou sem permissão. Verifique as credenciais da conta e tente novamente."
   },
   "Settings": {
     "title": "Configurações",

@@ -201,7 +201,8 @@
     "failedToLoad": "Failed to load connections.",
     "failedToCreate": "Failed to create connection.",
     "failedToUpdate": "Failed to update.",
-    "failedToDelete": "Failed to delete."
+    "failedToDelete": "Failed to delete.",
+    "syncErrorVercelForbidden": "Vercel token invalid or not authorized. Check the account credentials and try again."
   },
   "Settings": {
     "title": "Settings",
