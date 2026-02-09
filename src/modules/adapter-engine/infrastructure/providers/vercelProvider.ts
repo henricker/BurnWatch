@@ -11,6 +11,7 @@ import {
   SyncErrorWithKey,
   SYNC_ERROR_VERCEL_FORBIDDEN,
 } from "../../domain/cloudProvider";
+import { randomAroundMean } from "./randomAroundMean";
 
 const VERCEL_BILLING_URL = "https://api.vercel.com/v1/billing/charges";
 
@@ -18,19 +19,6 @@ const VERCEL_BILLING_URL = "https://api.vercel.com/v1/billing/charges";
 function toPeriodISO(dateStr: string): string {
   const normalized = dateStr.slice(0, 10);
   return `${normalized}T00:00:00.000Z`;
-}
-
-/**
- * Random value around mean with small standard deviation (approx normal).
- * stdDevRatio defaults to 0.15 (~15%); result is >= 0 and rounded to 2 decimals.
- */
-function randomAroundMean(mean: number, stdDevRatio: number = 0.15): number {
-  const stdDev = mean * stdDevRatio;
-  let z = 0;
-  for (let i = 0; i < 12; i++) z += Math.random();
-  z = (z - 6) * stdDev;
-  const value = Math.max(0, mean + z);
-  return Math.round(value * 100) / 100;
 }
 
 /**
@@ -56,7 +44,7 @@ export function fakeVercelBilledResponse(from: string, to: string): string {
   ];
 
   const lines = means.map(({ mean, service, consumed, unit, tags }) => {
-    const billed = randomAroundMean(mean);
+    const billed = randomAroundMean(mean, 0.15);
     const effective = randomAroundMean(mean, 0.12);
     return {
       BilledCost: billed,

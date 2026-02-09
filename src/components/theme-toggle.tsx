@@ -44,6 +44,8 @@ export function ThemeToggle({
   const value = (theme ?? currentTheme ?? "system") as Theme;
 
   useEffect(() => {
+    // This gates theme-dependent UI until after mount to avoid hydration mismatch.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 

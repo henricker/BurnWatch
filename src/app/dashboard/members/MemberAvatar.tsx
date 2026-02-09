@@ -28,6 +28,8 @@ export function MemberAvatar({
 
   if (url) {
     return (
+      // Avatar is a purely decorative image; Next.js Image optimization is not required here.
+      // eslint-disable-next-line @next/next/no-img-element
       <img
         src={url}
         alt=""

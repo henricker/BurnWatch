@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
@@ -15,7 +15,6 @@ import {
   ShieldCheck,
   Trash2,
   TrendingUp,
-  X,
   Zap,
   Save,
   Loader2,
@@ -43,13 +42,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  SYNC_ERROR_AWS_INVALID_CREDENTIALS,
+  SYNC_ERROR_VERCEL_FORBIDDEN,
+} from "@/modules/adapter-engine/domain/cloudProvider";
 
 type CloudProvider = "AWS" | "VERCEL" | "GCP";
 
 type CloudAccountStatus = "SYNCED" | "SYNCING" | "SYNC_ERROR";
-
-/** Keys stored in lastSyncError; map to translated messages in Connections. */
-const SYNC_ERROR_VERCEL_FORBIDDEN = "vercel-forbidden-error-sync";
 
 type AccountRow = {
   id: string;
@@ -166,7 +166,7 @@ export function ConnectionsView() {
   const [editModalAccount, setEditModalAccount] = useState<AccountRow | null>(null);
   const [deleteModalAccount, setDeleteModalAccount] = useState<AccountRow | null>(null);
 
-  async function loadAccounts() {
+  const loadAccounts = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -185,11 +185,11 @@ export function ConnectionsView() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [t]);
 
   useEffect(() => {
-    loadAccounts();
-  }, []);
+    void loadAccounts();
+  }, [loadAccounts]);
 
   const filteredAccounts = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -471,7 +471,9 @@ export function ConnectionsView() {
                                   <TooltipContent side="top" className="max-w-xs">
                                     {acc.lastSyncError === SYNC_ERROR_VERCEL_FORBIDDEN
                                       ? t("syncErrorVercelForbidden")
-                                      : acc.lastSyncError}
+                                      : acc.lastSyncError === SYNC_ERROR_AWS_INVALID_CREDENTIALS
+                                        ? t("syncErrorAwsInvalidCredentials")
+                                        : acc.lastSyncError}
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
@@ -718,7 +720,7 @@ function AddConnectionModal({
       return;
     }
 
-    let body: Record<string, string> = {
+    const body: Record<string, string> = {
       provider,
       label: trimmedLabel,
     };

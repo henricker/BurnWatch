@@ -180,6 +180,8 @@ export function CompleteProfileGate({
                   />
                   {displayAvatarUrl ? (
                     <div className="relative">
+                      {/* Avatar decorativo; Next.js Image não é obrigatório aqui. */}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={displayAvatarUrl}
                         alt=""

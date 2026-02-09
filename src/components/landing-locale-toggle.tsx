@@ -28,9 +28,12 @@ export function LandingLocaleToggle() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    document.cookie = `NEXT_LOCALE=${effectiveLocale}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
+  }, [effectiveLocale]);
+
   function handleSelect(locale: Locale) {
     setLocaleOverride(locale);
-    document.cookie = `NEXT_LOCALE=${locale}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
     setOpen(false);
   }
 

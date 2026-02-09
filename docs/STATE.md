@@ -1,6 +1,6 @@
-# BurnWatch – STATE (Milestone 05 – Dashboard Analytics)
+# BurnWatch – STATE (Milestone 06 – AWS Integration concluído)
 
-Este documento resume o estado atual da base de código após a conclusão do **Milestone 05: The "Aha!" Dashboard** e dos anteriores. Inclui Milestones 01–04 (auth, organizações, membros, i18n, Configurações, Conexões Cloud, adapter-engine (ICloudProvider, VercelProvider com Billing API, SyncService, DailySpend por `cloudAccountId`), tratamento de erro 403/token inválido (chave `vercel-forbidden-error-sync` + traduções + tooltip), UX de estado “A sincronizar…” com prioridade e limpeza ao receber resposta, e validação de token Vercel em formato alfanumérico (ex. `R1O1lKO7v8L0svh4dTbw6pfu`). Inclui ainda o **módulo de analytics** (getDashboardAnalytics, evolução por provedor, projeção MTD, anomalia Z-score, resource breakdown, spend by category), **GET /api/analytics** e o dashboard com gráfico de evolução, métricas e i18n completo. Serve como contexto para outras AIs continuarem o trabalho.
+Este documento resume o estado atual da base de código após a conclusão do **Milestone 06: AWS Integration** e dos anteriores (incl. **Milestone 05: The "Aha!" Dashboard**). Inclui Milestones 01–04 (auth, organizações, membros, i18n, Configurações, Conexões Cloud, adapter-engine (ICloudProvider, VercelProvider com Billing API, SyncService, DailySpend por `cloudAccountId`), tratamento de erro 403/token inválido (chave `vercel-forbidden-error-sync` + traduções + tooltip), UX de estado “A sincronizar…” com prioridade e limpeza ao receber resposta, e validação de token Vercel em formato alfanumérico (ex. `R1O1lKO7v8L0svh4dTbw6pfu`). Inclui ainda o **módulo de analytics** (getDashboardAnalytics, evolução por provedor, projeção MTD, anomalia Z-score, resource breakdown, spend by category), **GET /api/analytics** e o dashboard com gráfico de evolução, métricas e i18n completo. Serve como contexto para outras AIs continuarem o trabalho.
 
 ---
 
@@ -330,20 +330,21 @@ Arquivo: `src/modules/analytics/application/analyticsService.test.ts`
 - **Serviço** (`src/modules/cloud-provider-credentials/application/cloudCredentialsService.ts`): `listAccounts`, `createAccount` (valida, encripta, grava), `updateLabel`, `syncAccount` (delega ao adapter-engine), `deleteAccount`. Erros: `CloudCredentialsError`, `CloudCredentialsNotFoundError`, `CloudCredentialsValidationError`. Testes em `cloudCredentialsService.test.ts`.
 - **APIs** (orquestradoras): `GET/POST /api/cloud-accounts`, `PATCH /api/cloud-accounts/[id]` (label), `POST /api/cloud-accounts/[id]` (sync – chama SyncService do adapter-engine); resolvem utilizador/org via `profileService`.
 
-### Módulo adapter-engine (Milestone 04)
+### Módulo adapter-engine (Milestone 04 + início Milestone 06)
 
-- **Domínio** (`src/modules/adapter-engine/domain/cloudProvider.ts`): interface `ICloudProvider` (`fetchDailySpend(cloudAccount, range)`), tipos `DailySpendData`, `FetchRange`, constante `SYNC_ERROR_VERCEL_FORBIDDEN` e classe `SyncErrorWithKey` para erros com chave armazenável em `lastSyncError`.
-- **VercelProvider** (`src/modules/adapter-engine/infrastructure/providers/vercelProvider.ts`): integração real com Vercel Billing API (`GET /v1/billing/charges`), desencriptação do token, resposta JSONL normalizada para `amountCents` e `serviceName`; em 403 com `invalidToken`/“Not authorized” lança `SyncErrorWithKey` com chave `vercel-forbidden-error-sync`.
-- **MockProvider** (`src/modules/adapter-engine/infrastructure/providers/mockProvider.ts`): retorna `[]` para AWS/GCP (placeholder até implementação real).
-- **SyncService** (`src/modules/adapter-engine/application/syncService.ts`): orquestra sync por conta (SYNCING → provider.fetchDailySpend → **bulk upsert** por dia via `upsertDailySpendBulk(prisma, dayInputs)` → SYNCED ou SYNC_ERROR com `lastSyncError` = chave ou mensagem). Cada dia é persistido numa única transação (todas as rows do dia de uma vez). Em erro do tipo `SyncErrorWithKey` grava a chave em `lastSyncError` para tradução na UI.
-- **Conexões (UI):** Em SYNC_ERROR com `lastSyncError`, tooltip na célula de estado mostra mensagem traduzida (chave `syncErrorVercelForbidden` em pt/en/es) ou texto bruto. Estado “A sincronizar…” tem prioridade (mostrado assim que o utilizador clica em sync); `syncingIds` é limpo ao receber resposta da API. **Ao criar um cloud provider:** a conta é adicionada já com `status: "SYNCING"` e o id em `syncingIds` no `onSuccess` do modal; condição unificada `showSyncing = isSyncing || acc.status === "SYNCING"` para a coluna “Último sync” (ícone + “Sincronizando…”), botão de sync (disabled + spin) e célula de estado — assim a primeira renderização já mostra loading em toda a linha. Token Vercel aceite em formato alfanumérico na validação do formulário.
+- **Domínio** (`src/modules/adapter-engine/domain/cloudProvider.ts`): interface `ICloudProvider` (`fetchDailySpend(cloudAccount, range)`), tipos `DailySpendData`, `FetchRange`, constantes `SYNC_ERROR_VERCEL_FORBIDDEN` e `SYNC_ERROR_AWS_INVALID_CREDENTIALS` e classe `SyncErrorWithKey` para erros com chave armazenável em `lastSyncError`.
+- **VercelProvider** (`src/modules/adapter-engine/infrastructure/providers/vercelProvider.ts`): integração real com Vercel Billing API (`GET /v1/billing/charges`), desencriptação do token, resposta JSONL normalizada para `amountCents` e `serviceName`; em 403 com `invalidToken`/“Not authorized” lança `SyncErrorWithKey` com chave `vercel-forbidden-error-sync`. Possui modo fake via `fakeVercelBilledResponse(from, to)` activado por `USE_FAKE_VERCEL_BILLING="true"` (JSONL com serviços típicos da Vercel).
+- **AwsProvider** (`src/modules/adapter-engine/infrastructure/providers/awsProvider.ts` – Milestone 06): integração com AWS Cost Explorer via `@aws-sdk/client-cost-explorer` (`GetCostAndUsageCommand` com `Granularity: "DAILY"`, `Metrics: ["UnblendedCost"]`, `GroupBy` por `SERVICE`). Desencripta `accessKeyId`/`secretAccessKey`/`region` do `encryptedCredentials`, normaliza `Amount` (string decimal) para `amountCents` (inteiro) e usa `serviceName` = nome do serviço AWS. Em erros de credencial (`InvalidClientTokenId`, `InvalidSignatureException`, etc.) lança `SyncErrorWithKey` com chave `aws-invalid-credentials-error`. Também expõe `fakeAwsBilledResponse(range)` para uso local, controlado por `USE_FAKE_AWS_BILLING="true"`.
+- **MockProvider** (`src/modules/adapter-engine/infrastructure/providers/mockProvider.ts`): continua a retornar `[]` para GCP/OTHER até implementação real.
+- **SyncService** (`src/modules/adapter-engine/application/syncService.ts`): orquestra sync por conta (SYNCING → provider.fetchDailySpend → **bulk upsert** por dia via `upsertDailySpendBulk(prisma, dayInputs)` → SYNCED ou SYNC_ERROR com `lastSyncError` = chave ou mensagem). Cada dia é persistido numa única transação (todas as rows do dia de uma vez). Em erro do tipo `SyncErrorWithKey` grava a chave em `lastSyncError` para tradução na UI. Para `provider === "AWS"` passa a usar `AwsProvider` real; para `VERCEL` usa `VercelProvider`; demais continuam em `MockProvider`.
+- **Conexões (UI):** Em SYNC_ERROR com `lastSyncError`, tooltip na célula de estado mostra mensagem traduzida (chaves `syncErrorVercelForbidden` e `syncErrorAwsInvalidCredentials` em pt/en/es) ou texto bruto. Estado “A sincronizar…” tem prioridade (mostrado assim que o utilizador clica em sync); `syncingIds` é limpo ao receber resposta da API. **Ao criar um cloud provider:** a conta é adicionada já com `status: "SYNCING"` e o id em `syncingIds` no `onSuccess` do modal; condição unificada `showSyncing = isSyncing || acc.status === "SYNCING"` para a coluna “Último sync” (ícone + “Sincronizando…”), botão de sync (disabled + spin) e célula de estado — assim a primeira renderização já mostra loading em toda a linha. Token Vercel aceite em formato alfanumérico na validação do formulário.
 
 **Melhorias futuras (sync):** Para o MVP o sync é disparado na mesma requisição HTTP (POST `/api/cloud-accounts/[id]`) e o cliente aguarda a conclusão. Uma evolução natural é mover a ingestão para **background jobs com filas e workers**; a UI passaria a consultar o estado (`status` / `lastSyncedAt`) em vez de manter a conexão aberta até o fim. Por agora mantemos o fluxo síncrono por simplicidade.
 
 - **Opção preferencial – Trigger.dev:** Plano free com limites documentados ([Limits](https://trigger.dev/docs/limits)): concurrency (ex.: 10–20 runs em prod), $5/mês de uso incluído, 10 schedules, retries e dashboard. Integração Next.js (Route Handler ou Server Action com `tasks.trigger()`), filas e [Concurrency & Queues](https://trigger.dev/docs/queue-concurrency) com `concurrencyLimit` e `concurrencyKey` (per-tenant, ex. por `organizationId`). Deploy via CLI ou [GitHub Actions](https://trigger.dev/docs/github-actions); as tasks correm na infra Trigger.dev (sync longo sem timeout). Documentação e pricing públicos.
 - **Alternativa – Vercel Queues:** [Limited Beta](https://vercel.com/changelog/vercel-queues-is-now-in-limited-beta); SDK `@vercel/queue` (alpha). Limites técnicos: 1 000 msg/s por tópico, payload máx 4,5 MB. Plano free e quotas não estão documentados na página de limites/preços da Vercel; considerar quando a oferta e o free tier estiverem claros.
 
-Resultado atual: `pnpm test` passa com todos os testes (incl. encryption, dailySpend, organizations, cloud-provider-credentials, adapter-engine syncService, **analytics analyticsService**).
+Resultado atual: `pnpm test` passa com todos os testes (incl. encryption, dailySpend, organizations, cloud-provider-credentials, adapter-engine (SyncService + AwsProvider/VercelProvider), **analytics analyticsService**).
 
 ---
 
@@ -409,3 +410,31 @@ Comparado à descrição em `docs/sprints/SPRINT_01.md` (Milestone 2), o que foi
 
 **Milestone 05 concluído – The "Aha!" Dashboard:** Módulo `analytics` com getDashboardAnalytics (evolução por dia/provedor, projeção MTD, daily burn, anomalia Z-score, resource breakdown, spend by category); serviceNameToCategory com categorias Observability e Automation e mapa Vercel; GET /api/analytics; dashboard com gráfico de evolução (múltiplas linhas quando All), métricas, scroll discreto e i18n completo. Testes em `analyticsService.test.ts` (resolveDateRange e getDashboardAnalytics com Prisma mock e fake timers).
 
+---
+
+## 11. CI, Lint e Ajustes Recentes
+
+- **CI (GitHub Actions)** – `.github/workflows/ci.yml`:
+  - **Cache pnpm:** `cache: 'pnpm'` é definido em `actions/setup-node@v4` (não em `pnpm/action-setup`, que ignora `cache: true`). O store pnpm é cacheado entre runs.
+  - **Prisma client:** passo explícito `pnpm prisma generate` após `pnpm install` e antes de Lint/Test, para que `.prisma/client` exista na CI e os testes (ex.: `onboardingService.test.ts`) não falhem com `Cannot find module '.prisma/client/default'`.
+  - Sequência: Checkout → Install pnpm → Setup Node (cache pnpm) → Install deps → **Generate Prisma client** → Lint → Test → Build.
+
+- **Lint (ESLint):**
+  - `pnpm lint` passa com **zero erros e zero warnings**.
+  - Remoção de imports/variáveis não usados em: `LandingContent`, `api/organization/route`, `InviteMemberButton`, `MembersView`, `dashboard/page`, `locale-switcher`, `syncService`, `analyticsService`, `mockProvider`, `awsProvider.test.ts`.
+  - Uso intencional de `<img>` em avatares e imagens decorativas (Landing, MemberAvatar, ProfileEditForm, SettingsView, complete-profile-gate, owner-onboarding-card) com `eslint-disable-next-line @next/next/no-img-element` local.
+  - Padrão “mounted” em theme/locale toggles e app-sidebar mantido com `eslint-disable-next-line react-hooks/set-state-in-effect` onde aplicável; callback de auth com `react-hooks/exhaustive-deps` documentado.
+  - `components/ui/sidebar.tsx`: skeleton com largura fixa (sem `Math.random` em render); `landing-locale-toggle`: escrita de cookie em `useEffect` para respeitar regra de imutabilidade.
+  - `api/organization/route.ts`: `DELETE` sem parâmetro não utilizado.
+
+- **Dashboard (tema claro):**
+  - Ícone/nome do provedor **Vercel** no resource breakdown usa `text-slate-900 dark:text-white` para contraste correto no tema claro (símbolo visível em fundo branco).
+
+- **Dashboard – gráfico de evolução (Milestone 06):**
+  - Visão 30 dias: eixo X com rótulos amostrados (5 pontos: início, 25%, 50%, 75%, fim) para evitar sobreposição; eixo Y com escala em moeda (0, 25%, 50%, 75%, 100% do máximo); linha GCP em verde (`#22c55e`) para visibilidade no dark mode; tooltip no hover com data e valores (AWS, Vercel, GCP, total) do dia correspondente à posição do cursor.
+
+- **Dashboard – gasto por categoria:**
+  - Light mode: container dos ícones com `bg-slate-200/80` e ícone `text-slate-600`; faixa da barra de progresso com `bg-slate-200/70`; no hover, rótulo da categoria com `group-hover:text-slate-900` em vez de branco para manter legibilidade.
+
+- **Sidebar (modo colapsado):**
+  - Header: símbolo BurnWatch com container `size-8` (32px) alinhado aos botões de navegação; padding do header no modo ícone `pl-6 pr-2` para coincidir com o padding efetivo do conteúdo (SidebarContent px-4 + SidebarGroup p-2); texto (nome da org e role) oculto no modo colapsado; modo aberto preservado (layout original com ícone + texto no bloco com borda).

@@ -10,7 +10,6 @@ import { fetchWithRetry } from "@/lib/safe-fetch";
 
 interface InviteMemberButtonProps {
   organizationId: string;
-  currentUserRole: Role;
   allowInviteAdmin: boolean;
   /** Override button label (e.g. "Novo Membro" on members page). */
   buttonLabel?: string;
@@ -18,7 +17,6 @@ interface InviteMemberButtonProps {
 
 export function InviteMemberButton({
   organizationId,
-  currentUserRole,
   allowInviteAdmin,
   buttonLabel,
 }: InviteMemberButtonProps) {

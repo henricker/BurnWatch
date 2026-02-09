@@ -8,9 +8,11 @@ import type { DailySpendData, FetchRange, ICloudProvider } from "../../domain/cl
  */
 export class MockProvider implements ICloudProvider {
   async fetchDailySpend(
-    _cloudAccount: CloudAccount,
-    _range: FetchRange,
+    cloudAccount: CloudAccount,
+    range: FetchRange,
   ): Promise<DailySpendData[]> {
+    void cloudAccount;
+    void range;
     return [];
   }
 }

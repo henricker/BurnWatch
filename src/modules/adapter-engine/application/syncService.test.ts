@@ -3,6 +3,17 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { EncryptionService } from "@/lib/security/encryption";
 
+// Mock AwsProvider so sync tests don't hit the real AWS SDK / network.
+vi.mock("../infrastructure/providers/awsProvider", () => {
+  class AwsProviderMock {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    async fetchDailySpend(_cloudAccount: unknown, _range: unknown) {
+      return [];
+    }
+  }
+  return { AwsProvider: AwsProviderMock };
+});
+
 import { syncAccount, SyncNotFoundError } from "./syncService";
 
 function createEncryptionMock(): EncryptionService {

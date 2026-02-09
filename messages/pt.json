@@ -229,7 +229,8 @@
     "failedToCreate": "Falha ao criar conexão.",
     "failedToUpdate": "Falha ao atualizar.",
     "failedToDelete": "Falha ao eliminar.",
-    "syncErrorVercelForbidden": "Token Vercel inválido ou sem permissão. Verifique as credenciais da conta e tente novamente."
+    "syncErrorVercelForbidden": "Token Vercel inválido ou sem permissão. Verifique as credenciais da conta e tente novamente.",
+    "syncErrorAwsInvalidCredentials": "Credenciais AWS inválidas ou sem permissão. Verifique o utilizador/role IAM e tente novamente."
   },
   "Settings": {
     "title": "Configurações",

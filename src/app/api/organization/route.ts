@@ -63,7 +63,7 @@ export async function PATCH(request: Request) {
  * DELETE: Delete the organization and all related data. Only OWNER.
  * Deletes all members' Supabase Auth users, then the organization (cascade).
  */
-export async function DELETE(_request: Request) {
+export async function DELETE() {
   const supabase = await createSupabaseServerClient();
 
   const {
