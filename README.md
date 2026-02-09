@@ -41,6 +41,7 @@ Identify "Zombies"—forgotten instances, idle GPUs, and orphaned storage volume
 
 * **Security First:** AES-256-GCM encryption for all cloud credentials. We never store what we don't need.
 * **Adapter-Based Engine:** A modular architecture that allows adding new cloud providers in hours, not weeks.
+* **Backend by Use Cases:** Each module follows a clear layout: `domain/`, `application/use-cases/<use-case-name>/` (with `index.ts` and `index.spec.ts` per use case), and `infrastructure/`. API routes stay thin and delegate to use-case classes.
 * **Lightweight & Edge-Ready:** Built on **Next.js** (App Router), Supabase (Auth + Postgres), and Prisma; optimized for low-latency dashboards and global reach.
 * **Predictive Layer:** Custom math engine for trend analysis and anomaly scoring.
 
@@ -59,6 +60,7 @@ Identify "Zombies"—forgotten instances, idle GPUs, and orphaned storage volume
 **Sprint 02: Multi-Cloud Expansion & Business Readiness**
 
 - **M6 – AWS Integration:** ✅ Concluído. `AwsProvider` com Cost Explorer SDK, modo fake, tratamento de credencial inválida e mensagens traduzidas em Connections; CI com cache pnpm e `prisma generate`; lint sem erros nem warnings; polimento do dashboard (gráfico 30 dias com eixo X/Y e tooltip no hover, gasto por categoria em light mode) e da sidebar (logo alinhado no modo colapsado, modo aberto preservado).
+- **M6.5 – Backend Architecture Improvements:** ✅ Concluído. Use cases em classes (domain / application / infrastructure); uma pasta por use case em kebab-case com `index.ts` e `index.spec.ts` em todos os módulos; rotas API finas; Vitest com `*.spec.ts`; 105 testes e build passando. Necessário para a evolução sustentável da plataforma.
 - **M7 – GCP Integration:** Cloud Billing API (ou BigQuery export), Service Account JSON encriptado, mapping Cloud Run/GCE/Cloud SQL.
 - **M8 – Notification Engine:** Webhooks por organização (Slack, Discord), Burn do Dia e Alerta de Spike, trigger por anomalia (Z-score > 2).
 - **M9 – Monetization:** Stripe Checkout (Starter R$ 97 / $49, Pro R$ 197 / $149), Usage Guards (soft block), pricing regional (`bw_market`).

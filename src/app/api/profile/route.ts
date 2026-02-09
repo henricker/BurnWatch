@@ -3,10 +3,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { setLocaleCookie } from "@/lib/i18n-cookie";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import {
-  updateProfile,
-  ProfileNotFoundError,
-} from "@/modules/organizations/application/profileService";
+import { UpdateProfileUseCase } from "@/modules/organizations/application/use-cases/update-profile-usecase";
+import { ProfileNotFoundError } from "@/modules/organizations/domain/profile";
 
 export async function PATCH(request: Request) {
   const supabase = await createSupabaseServerClient();
@@ -47,7 +45,8 @@ export async function PATCH(request: Request) {
   }
 
   try {
-    const updated = await updateProfile(prisma, user.id, organizationId, {
+    const useCase = new UpdateProfileUseCase(prisma);
+    const updated = await useCase.execute(user.id, organizationId, {
       firstName,
       lastName,
       avatarPath,

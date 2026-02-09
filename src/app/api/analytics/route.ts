@@ -2,12 +2,9 @@ import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getProfileByUserId } from "@/modules/organizations/application/profileService";
-import {
-  getDashboardAnalytics,
-  type DateRangeKey,
-  type ProviderFilterKey,
-} from "@/modules/analytics/application/analyticsService";
+import { GetProfileByUserIdUseCase } from "@/modules/organizations/application/use-cases/get-profile-by-user-id-usecase";
+import { GetDashboardAnalyticsUseCase } from "@/modules/analytics/application/use-cases/get-dashboard-analytics-usecase";
+import type { DateRangeKey, ProviderFilterKey } from "@/modules/analytics/domain/types";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +27,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const profile = await getProfileByUserId(prisma, user.id);
+  const profileUseCase = new GetProfileByUserIdUseCase(prisma);
+  const profile = await profileUseCase.execute(user.id);
   if (!profile) {
     return NextResponse.json({ error: "Profile not found" }, { status: 404 });
   }
@@ -52,7 +50,8 @@ export async function GET(request: Request) {
     );
   }
 
-  const result = await getDashboardAnalytics(prisma, {
+  const useCase = new GetDashboardAnalyticsUseCase(prisma);
+  const result = await useCase.execute({
     organizationId: profile.organizationId,
     dateRange,
     providerFilter,

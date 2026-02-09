@@ -3,15 +3,16 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { EncryptionService } from "@/lib/security/encryption";
+import { DeleteAccountUseCase } from "@/modules/cloud-provider-credentials/application/use-cases/delete-account-usecase";
+import { UpdateLabelUseCase } from "@/modules/cloud-provider-credentials/application/use-cases/update-label-usecase";
 import {
-  updateLabel,
-  deleteAccount,
+  CloudCredentialsError,
   CloudCredentialsNotFoundError,
   CloudCredentialsValidationError,
-  CloudCredentialsError,
-} from "@/modules/cloud-provider-credentials/application/cloudCredentialsService";
-import { syncAccount as syncAccountAdapter, SyncNotFoundError } from "@/modules/adapter-engine/application/syncService";
-import { getProfileByUserId } from "@/modules/organizations/application/profileService";
+} from "@/modules/cloud-provider-credentials/domain/cloudCredentials";
+import { SyncAccountUseCase } from "@/modules/adapter-engine/application/use-cases/sync-account-usecase";
+import { SyncNotFoundError } from "@/modules/adapter-engine/domain/sync";
+import { GetProfileByUserIdUseCase } from "@/modules/organizations/application/use-cases/get-profile-by-user-id-usecase";
 
 /**
  * PATCH: Update cloud account label only.
@@ -31,7 +32,8 @@ export async function PATCH(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const profile = await getProfileByUserId(prisma, user.id);
+  const profileUseCase = new GetProfileByUserIdUseCase(prisma);
+  const profile = await profileUseCase.execute(user.id);
   if (!profile) {
     return NextResponse.json({ error: "Profile not found" }, { status: 404 });
   }
@@ -46,7 +48,8 @@ export async function PATCH(
   const label = typeof body.label === "string" ? body.label : "";
 
   try {
-    await updateLabel(prisma, profile.organizationId, accountId, label);
+    const updateLabelUseCase = new UpdateLabelUseCase(prisma);
+    await updateLabelUseCase.execute(profile.organizationId, accountId, label);
     return NextResponse.json({ ok: true });
   } catch (err) {
     if (err instanceof CloudCredentialsValidationError) {
@@ -81,7 +84,8 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const profile = await getProfileByUserId(prisma, user.id);
+  const profileUseCase = new GetProfileByUserIdUseCase(prisma);
+  const profile = await profileUseCase.execute(user.id);
   if (!profile) {
     return NextResponse.json({ error: "Profile not found" }, { status: 404 });
   }
@@ -100,7 +104,8 @@ export async function POST(
   }
 
   try {
-    const result = await syncAccountAdapter(prisma, encryption, {
+    const useCase = new SyncAccountUseCase(prisma, encryption);
+    const result = await useCase.execute({
       organizationId: profile.organizationId,
       accountId,
     });
@@ -137,13 +142,15 @@ export async function DELETE(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const profile = await getProfileByUserId(prisma, user.id);
+  const profileUseCase = new GetProfileByUserIdUseCase(prisma);
+  const profile = await profileUseCase.execute(user.id);
   if (!profile) {
     return NextResponse.json({ error: "Profile not found" }, { status: 404 });
   }
 
   try {
-    await deleteAccount(prisma, profile.organizationId, accountId);
+    const deleteAccountUseCase = new DeleteAccountUseCase(prisma);
+    await deleteAccountUseCase.execute(profile.organizationId, accountId);
     return NextResponse.json({ ok: true });
   } catch (err) {
     if (err instanceof CloudCredentialsNotFoundError) {

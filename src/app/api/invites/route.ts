@@ -5,8 +5,9 @@ import type { Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { createSupabaseOtpClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createInvite, InviteError } from "@/modules/organizations/application/inviteService";
-import { getProfileByUserAndOrganization } from "@/modules/organizations/application/profileService";
+import { CreateInviteUseCase } from "@/modules/organizations/application/use-cases/create-invite-usecase";
+import { GetProfileByUserAndOrganizationUseCase } from "@/modules/organizations/application/use-cases/get-profile-by-user-and-organization-usecase";
+import { InviteError } from "@/modules/organizations/domain/invite";
 
 export async function POST(request: Request) {
   const supabase = await createSupabaseServerClient();
@@ -46,11 +47,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const profile = await getProfileByUserAndOrganization(
-    prisma,
-    user.id,
-    organizationId,
-  );
+  const profileUseCase = new GetProfileByUserAndOrganizationUseCase(prisma);
+  const profile = await profileUseCase.execute(user.id, organizationId);
 
   if (!profile) {
     return NextResponse.json(
@@ -70,7 +68,8 @@ export async function POST(request: Request) {
     // Use OTP client with implicit flow so the magic link redirects with #access_token=...
     // instead of ?code=..., avoiding "PKCE code verifier not found" for the invitee.
     const otpClient = createSupabaseOtpClient();
-    await createInvite(prisma, otpClient, {
+    const useCase = new CreateInviteUseCase(prisma, otpClient);
+    await useCase.execute({
       adminId: user.id,
       organizationId,
       guestEmail: email.trim(),

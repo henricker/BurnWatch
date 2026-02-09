@@ -16,7 +16,7 @@ import {
   SyncErrorWithKey,
   SYNC_ERROR_AWS_INVALID_CREDENTIALS,
 } from "../../domain/cloudProvider";
-import { randomAroundMean } from "./randomAroundMean";
+import { randomAroundMean } from "./util/randomAroundMean";
 
 interface AwsCredentialsPayload {
   accessKeyId?: string;

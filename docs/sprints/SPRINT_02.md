@@ -33,6 +33,27 @@ Expandir o poder de fogo do BurnWatch integrando os "pesos pesados" da nuvem (AW
 
 ---
 
+## 🏛 Milestone 06.5: Backend Architecture Improvements (Arch Improvements)
+
+**Status:** ✅ Concluído.
+
+**Meta:** Melhorar a arquitetura do backend para evolução sustentável da plataforma: uso de classes e use cases, organização por módulos (domain / application / infrastructure), um use case por pasta com `index.ts` e `index.spec.ts`, e rotas API finas.
+
+### Entregues
+
+- **Use cases em classes:** Substituição de funções soltas por classes de use case (dependências no construtor, método `execute()`). Rotas e testes atualizados para instanciar e usar essas classes.
+- **Layout em três camadas por módulo:** Em cada `src/modules/{módulo}`: **domain/** (entidades, contratos, erros de domínio), **application/use-cases/** (um use case por pasta), **infrastructure/** (implementações reais: repositórios, adaptadores, Prisma).
+- **Uma pasta por use case (kebab-case):** Estrutura `use-cases/{nome-do-usecase}/index.ts` e `index.spec.ts` em todos os módulos (adapter-engine, billing, analytics, cloud-provider-credentials, organizations). Nomes de pastas em kebab-case (ex.: `sync-account-usecase`, `create-invite-usecase`). Mesma classe exportada (ex.: `SyncAccountUseCase`) para não quebrar consumidores.
+- **Rotas API finas:** Rotas apenas resolvem sessão, instanciam o use case e devolvem o resultado. Injeção de dependências via construtor.
+- **Testes por use case:** Cada use case com seu `index.spec.ts` ao lado; Vitest config atualizado para incluir `src/**/*.spec.ts` além de `*.test.ts`.
+- **Limpeza:** Remoção de arquivos antigos (use cases em arquivo único e testes de serviço consolidados). Lint, 105 testes e build Next.js passando.
+
+### Impacto
+
+Necessário para a evolução da plataforma: código mais legível, testes alinhados ao use case, e estrutura que outro desenvolvedor consegue seguir e estender com segurança.
+
+---
+
 ## 🌐 Milestone 07: GCP Integration (The Data Lake)
 
 **Meta:** Conectar ao Google Cloud Platform para ingestão de faturamento.

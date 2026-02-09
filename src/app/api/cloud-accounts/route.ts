@@ -5,13 +5,13 @@ import type { CloudProvider } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { EncryptionService } from "@/lib/security/encryption";
+import { CreateAccountUseCase } from "@/modules/cloud-provider-credentials/application/use-cases/create-account-usecase";
+import { ListAccountsUseCase } from "@/modules/cloud-provider-credentials/application/use-cases/list-accounts-usecase";
 import {
-  createAccount,
-  listAccounts,
   CloudCredentialsError,
   CloudCredentialsValidationError,
-} from "@/modules/cloud-provider-credentials/application/cloudCredentialsService";
-import { getProfileByUserId } from "@/modules/organizations/application/profileService";
+} from "@/modules/cloud-provider-credentials/domain/cloudCredentials";
+import { GetProfileByUserIdUseCase } from "@/modules/organizations/application/use-cases/get-profile-by-user-id-usecase";
 
 export const dynamic = "force-dynamic";
 
@@ -29,12 +29,14 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const profile = await getProfileByUserId(prisma, user.id);
+  const profileUseCase = new GetProfileByUserIdUseCase(prisma);
+  const profile = await profileUseCase.execute(user.id);
   if (!profile) {
     return NextResponse.json({ error: "Profile not found" }, { status: 404 });
   }
 
-  const accounts = await listAccounts(prisma, profile.organizationId);
+  const listUseCase = new ListAccountsUseCase(prisma);
+  const accounts = await listUseCase.execute(profile.organizationId);
 
   return NextResponse.json({ accounts });
 }
@@ -63,7 +65,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const profile = await getProfileByUserId(prisma, user.id);
+  const profileUseCase = new GetProfileByUserIdUseCase(prisma);
+  const profile = await profileUseCase.execute(user.id);
   if (!profile) {
     return NextResponse.json({ error: "Profile not found" }, { status: 404 });
   }
@@ -107,7 +110,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    const account = await createAccount(prisma, encryption, {
+    const createUseCase = new CreateAccountUseCase(prisma, encryption);
+    const account = await createUseCase.execute({
       organizationId: profile.organizationId,
       provider,
       label,

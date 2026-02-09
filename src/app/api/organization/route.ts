@@ -2,13 +2,13 @@ import { NextResponse } from "next/server";
 
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { DeleteOrganizationUseCase } from "@/modules/organizations/application/use-cases/delete-organization-usecase";
+import { UpdateOrganizationNameUseCase } from "@/modules/organizations/application/use-cases/update-organization-name-usecase";
 import {
-  updateOrganizationName,
-  deleteOrganization,
   OrganizationError,
-  OrganizationNotFoundError,
   OrganizationForbiddenError,
-} from "@/modules/organizations/application/organizationService";
+  OrganizationNotFoundError,
+} from "@/modules/organizations/domain/organization";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -43,7 +43,8 @@ export async function PATCH(request: Request) {
   }
 
   try {
-    await updateOrganizationName(prisma, user.id, name);
+    const useCase = new UpdateOrganizationNameUseCase(prisma);
+    await useCase.execute(user.id, name);
     return NextResponse.json({ ok: true });
   } catch (err) {
     if (err instanceof OrganizationNotFoundError) {
@@ -78,7 +79,8 @@ export async function DELETE() {
   const admin = createSupabaseAdminClient();
 
   try {
-    await deleteOrganization(prisma, user.id, {
+    const useCase = new DeleteOrganizationUseCase(prisma);
+    await useCase.execute(user.id, {
       supabaseAdmin: admin ?? undefined,
     });
     return NextResponse.json({ ok: true });

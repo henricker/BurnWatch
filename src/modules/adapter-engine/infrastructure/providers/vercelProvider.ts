@@ -11,7 +11,7 @@ import {
   SyncErrorWithKey,
   SYNC_ERROR_VERCEL_FORBIDDEN,
 } from "../../domain/cloudProvider";
-import { randomAroundMean } from "./randomAroundMean";
+import { randomAroundMean } from "./util/randomAroundMean";
 
 const VERCEL_BILLING_URL = "https://api.vercel.com/v1/billing/charges";
 
