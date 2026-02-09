@@ -230,7 +230,9 @@
     "failedToUpdate": "Falha ao atualizar.",
     "failedToDelete": "Falha ao eliminar.",
     "syncErrorVercelForbidden": "Token Vercel inválido ou sem permissão. Verifique as credenciais da conta e tente novamente.",
-    "syncErrorAwsInvalidCredentials": "Credenciais AWS inválidas ou sem permissão. Verifique o utilizador/role IAM e tente novamente."
+    "syncErrorAwsInvalidCredentials": "Credenciais AWS inválidas ou sem permissão. Verifique o utilizador/role IAM e tente novamente.",
+    "syncErrorGcpInvalidCredentials": "Credenciais da service account GCP inválidas ou sem permissão. Verifique a chave e as permissões.",
+    "syncErrorGcpBillingExport": "A exportação de faturação GCP para BigQuery não está configurada ou não é acessível. Ative a exportação e conceda à service account acesso ao dataset."
   },
   "Settings": {
     "title": "Configurações",

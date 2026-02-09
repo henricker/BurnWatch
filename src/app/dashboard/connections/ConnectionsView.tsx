@@ -44,6 +44,8 @@ import {
 } from "@/components/ui/tooltip";
 import {
   SYNC_ERROR_AWS_INVALID_CREDENTIALS,
+  SYNC_ERROR_GCP_BILLING_EXPORT,
+  SYNC_ERROR_GCP_INVALID_CREDENTIALS,
   SYNC_ERROR_VERCEL_FORBIDDEN,
 } from "@/modules/adapter-engine/domain/cloudProvider";
 
@@ -473,7 +475,11 @@ export function ConnectionsView() {
                                       ? t("syncErrorVercelForbidden")
                                       : acc.lastSyncError === SYNC_ERROR_AWS_INVALID_CREDENTIALS
                                         ? t("syncErrorAwsInvalidCredentials")
-                                        : acc.lastSyncError}
+                                        : acc.lastSyncError === SYNC_ERROR_GCP_INVALID_CREDENTIALS
+                                          ? t("syncErrorGcpInvalidCredentials")
+                                          : acc.lastSyncError === SYNC_ERROR_GCP_BILLING_EXPORT
+                                            ? t("syncErrorGcpBillingExport")
+                                            : acc.lastSyncError}
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>

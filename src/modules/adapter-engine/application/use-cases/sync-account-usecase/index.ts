@@ -10,6 +10,7 @@ import { SyncNotFoundError } from "../../../domain/sync";
 import { MockProvider } from "../../../infrastructure/providers/mockProvider";
 import { AwsProvider } from "../../../infrastructure/providers/awsProvider";
 import { VercelProvider } from "../../../infrastructure/providers/vercelProvider";
+import { GcpProvider } from "../../../infrastructure/providers/gcpProvider";
 
 function toDateString(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -46,6 +47,7 @@ function getProvider(
     case "AWS":
       return new AwsProvider(encryption);
     case "GCP":
+      return new GcpProvider(encryption);
     case "OTHER":
       return new MockProvider();
     default:

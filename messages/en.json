@@ -230,7 +230,9 @@
     "failedToUpdate": "Failed to update.",
     "failedToDelete": "Failed to delete.",
     "syncErrorVercelForbidden": "Vercel token invalid or not authorized. Check the account credentials and try again.",
-    "syncErrorAwsInvalidCredentials": "AWS credentials invalid or not authorized. Check the IAM user/role and try again."
+    "syncErrorAwsInvalidCredentials": "AWS credentials invalid or not authorized. Check the IAM user/role and try again.",
+    "syncErrorGcpInvalidCredentials": "GCP service account credentials invalid or not authorized. Check the key and permissions.",
+    "syncErrorGcpBillingExport": "GCP Billing Export to BigQuery is not set up or not accessible. Enable export and grant the service account access to the dataset."
   },
   "Settings": {
     "title": "Settings",

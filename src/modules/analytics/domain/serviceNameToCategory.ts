@@ -48,6 +48,7 @@ const DATABASE_KEYWORDS = [
   "cloud sql",
   "dynamodb",
   "bigtable",
+  "bigquery",
   "database",
   "aurora",
   "kv",

@@ -46,7 +46,7 @@ Expandir o poder de fogo do BurnWatch integrando os "pesos pesados" da nuvem (AW
 - **Uma pasta por use case (kebab-case):** Estrutura `use-cases/{nome-do-usecase}/index.ts` e `index.spec.ts` em todos os módulos (adapter-engine, billing, analytics, cloud-provider-credentials, organizations). Nomes de pastas em kebab-case (ex.: `sync-account-usecase`, `create-invite-usecase`). Mesma classe exportada (ex.: `SyncAccountUseCase`) para não quebrar consumidores.
 - **Rotas API finas:** Rotas apenas resolvem sessão, instanciam o use case e devolvem o resultado. Injeção de dependências via construtor.
 - **Testes por use case:** Cada use case com seu `index.spec.ts` ao lado; Vitest config atualizado para incluir `src/**/*.spec.ts` além de `*.test.ts`.
-- **Limpeza:** Remoção de arquivos antigos (use cases em arquivo único e testes de serviço consolidados). Lint, 105 testes e build Next.js passando.
+- **Limpeza:** Remoção de arquivos antigos (use cases em arquivo único e testes de serviço consolidados). Lint, 116 testes e build Next.js passando.
 
 ### Impacto
 
@@ -56,13 +56,18 @@ Necessário para a evolução da plataforma: código mais legível, testes alinh
 
 ## 🌐 Milestone 07: GCP Integration (The Data Lake)
 
+**Status:** ✅ Concluído.
+
 **Meta:** Conectar ao Google Cloud Platform para ingestão de faturamento.
 
-### Requisitos Técnicos
+### Entregues
 
-- **GCP Adapter:** Utilizar a Cloud Billing API ou processamento de exportação para BigQuery (se necessário para maior precisão).
-- **Service Account Security:** Garantir que o upload do ficheiro JSON de credenciais seja processado e encriptado corretamente no SyncService.
-- **Mapping:** Traduzir serviços como Cloud Run, GCE e Cloud SQL para as categorias universais.
+- **GcpProvider** (`src/modules/adapter-engine/infrastructure/providers/gcpProvider.ts`): implementa `ICloudProvider`; credenciais Service Account JSON (`project_id`, `private_key`, `client_email`) desencriptadas e validadas; ingestão via **BigQuery Billing Export** (tabela `gcp_billing_export_v1_<<BILLING_ACCOUNT_ID>>`, dataset configurável com `GCP_BILLING_DATASET_ID`), agregação por dia e `service.description`, normalização para `amountCents`.
+- **Modo fake:** `fakeGcpBilledResponse(range)` com Compute Engine, BigQuery, Cloud Run, Cloud Storage; ativado por `USE_FAKE_GCP_BILLING="true"` para desenvolvimento/CI.
+- **Erros traduzidos:** `gcp-invalid-credentials-error` e `gcp-billing-export-error` com i18n (`syncErrorGcpInvalidCredentials`, `syncErrorGcpBillingExport`) em pt/en/es; tooltip em Connections na célula de estado.
+- **SyncAccountUseCase:** para `provider === "GCP"` usa `GcpProvider`; fluxo SYNCING → fetchDailySpend → bulk upsert → SYNCED ou SYNC_ERROR com `lastSyncError`.
+- **Mapping:** `serviceNameToCategory` com BigQuery → Database; dashboard usa cor GCP `#22c55e`.
+- **Testes:** `gcpProvider.spec.ts` cobre parse de credenciais (válido/inválido), fake response, `fetchDailySpend` em modo fake e erro de credenciais; 116 testes no total.
 
 ---
 
