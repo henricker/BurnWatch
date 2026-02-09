@@ -113,7 +113,7 @@ describe("AwsProvider.fetchDailySpend – real path (mocked SDK)", () => {
     vi.doMock("@aws-sdk/client-cost-explorer", () => {
       const LocalSendMock = sendMock;
       class CostExplorerClient {
-        // eslint-disable-next-line class-methods-use-this
+         
         send = LocalSendMock;
         constructor(_: unknown) {}
       }
@@ -156,7 +156,7 @@ describe("AwsProvider.fetchDailySpend – real path (mocked SDK)", () => {
     vi.doMock("@aws-sdk/client-cost-explorer", () => {
       const LocalSendMock = sendMock;
       class CostExplorerClient {
-        // eslint-disable-next-line class-methods-use-this
+         
         send = LocalSendMock;
         constructor(_: unknown) {}
       }

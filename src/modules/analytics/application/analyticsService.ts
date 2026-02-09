@@ -35,7 +35,7 @@ export interface DateRangeResult {
 export function resolveDateRange(range: DateRangeKey, now: Date = new Date()): DateRangeResult {
   const today = startOfDayUTC(now);
   let start: Date;
-  let end: Date = today;
+  const end: Date = today;
 
   if (range === "MTD") {
     start = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));

@@ -43,14 +43,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  SYNC_ERROR_AWS_INVALID_CREDENTIALS,
+  SYNC_ERROR_VERCEL_FORBIDDEN,
+} from "@/modules/adapter-engine/domain/cloudProvider";
 
 type CloudProvider = "AWS" | "VERCEL" | "GCP";
 
 type CloudAccountStatus = "SYNCED" | "SYNCING" | "SYNC_ERROR";
-
-/** Keys stored in lastSyncError; map to translated messages in Connections. */
-const SYNC_ERROR_VERCEL_FORBIDDEN = "vercel-forbidden-error-sync";
-const SYNC_ERROR_AWS_INVALID_CREDENTIALS = "aws-invalid-credentials-error";
 
 type AccountRow = {
   id: string;
@@ -721,7 +721,7 @@ function AddConnectionModal({
       return;
     }
 
-    let body: Record<string, string> = {
+    const body: Record<string, string> = {
       provider,
       label: trimmedLabel,
     };

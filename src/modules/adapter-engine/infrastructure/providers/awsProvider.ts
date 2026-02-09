@@ -16,6 +16,7 @@ import {
   SyncErrorWithKey,
   SYNC_ERROR_AWS_INVALID_CREDENTIALS,
 } from "../../domain/cloudProvider";
+import { randomAroundMean } from "./randomAroundMean";
 
 interface AwsCredentialsPayload {
   accessKeyId?: string;
@@ -36,17 +37,13 @@ function amountToCents(amount: string | undefined | null): number {
 }
 
 /**
- * Gera um valor aleatório em torno de uma média, com desvio padrão pequeno.
- * Semelhante ao usado no fake da Vercel: aproximação de normal com 12 amostras.
+ * Wrapper para geração de valor aleatório em torno de uma média, com desvio padrão pequeno,
+ * usando a função utilitária compartilhada. Mantém a mesma guarda específica da AWS para
+ * médias não positivas.
  */
-function randomAroundMean(mean: number, stdDevRatio: number = 0.12): number {
+function randomAroundMeanAws(mean: number, stdDevRatio: number = 0.12): number {
   if (mean <= 0) return 0;
-  const stdDev = mean * stdDevRatio;
-  let z = 0;
-  for (let i = 0; i < 12; i++) z += Math.random();
-  z = (z - 6) * stdDev;
-  const value = Math.max(0, mean + z);
-  return Math.round(value * 100) / 100;
+  return randomAroundMean(mean, stdDevRatio);
 }
 
 /**
@@ -55,10 +52,10 @@ function randomAroundMean(mean: number, stdDevRatio: number = 0.12): number {
  */
 export function fakeAwsBilledResponse(range: FetchRange): DailySpendData[] {
   const date = parseAwsDate(range.from);
-  const ec2 = randomAroundMean(150);
-  const rds = randomAroundMean(80);
-  const s3 = randomAroundMean(32);
-  const lambda = randomAroundMean(12);
+  const ec2 = randomAroundMeanAws(150);
+  const rds = randomAroundMeanAws(80);
+  const s3 = randomAroundMeanAws(32);
+  const lambda = randomAroundMeanAws(12);
   return [
     {
       date,
