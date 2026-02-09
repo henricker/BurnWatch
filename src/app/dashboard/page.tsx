@@ -423,7 +423,7 @@ export default function DashboardPage() {
       ),
     colorClass:
       p.id === "vercel"
-        ? "text-white"
+        ? "text-slate-900 dark:text-white"
         : p.id === "aws"
           ? "text-orange-500"
           : p.id === "gcp"

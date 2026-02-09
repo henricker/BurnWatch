@@ -10,9 +10,11 @@ import { Moon, Sun } from "lucide-react";
  */
 export function LandingThemeToggle() {
   const [mounted, setMounted] = useState(false);
-  const { theme, setTheme, resolvedTheme } = useTheme();
+  const { setTheme, resolvedTheme } = useTheme();
 
   useEffect(() => {
+    // This gates theme-dependent UI until after mount to avoid hydration mismatch.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 

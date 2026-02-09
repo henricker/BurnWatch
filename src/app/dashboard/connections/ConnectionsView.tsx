@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
@@ -15,7 +15,6 @@ import {
   ShieldCheck,
   Trash2,
   TrendingUp,
-  X,
   Zap,
   Save,
   Loader2,
@@ -167,7 +166,7 @@ export function ConnectionsView() {
   const [editModalAccount, setEditModalAccount] = useState<AccountRow | null>(null);
   const [deleteModalAccount, setDeleteModalAccount] = useState<AccountRow | null>(null);
 
-  async function loadAccounts() {
+  const loadAccounts = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -186,11 +185,11 @@ export function ConnectionsView() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [t]);
 
   useEffect(() => {
-    loadAccounts();
-  }, []);
+    void loadAccounts();
+  }, [loadAccounts]);
 
   const filteredAccounts = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();

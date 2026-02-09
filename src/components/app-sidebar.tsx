@@ -60,7 +60,6 @@ export function AppSidebar({
   organizationName,
   profileRole,
   organizationId,
-  theme: profileTheme,
   locale: profileLocale,
   avatarUrl,
   profileDisplayName,
@@ -80,7 +79,7 @@ export function AppSidebar({
   const pathname = usePathname();
   const router = useRouter();
   const { state: sidebarState } = useSidebar();
-  const { theme, setTheme, resolvedTheme } = useTheme();
+  const { setTheme, resolvedTheme } = useTheme();
   const localeContext = useLocaleOverride();
   const [mounted, setMounted] = useState(false);
 
@@ -91,6 +90,8 @@ export function AppSidebar({
     (profileLocale && isValidLocale(profileLocale) ? profileLocale : "pt");
 
   useEffect(() => {
+    // This is safe: it only gates client-only UI (Radix IDs, theme icons) after mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 
