@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { setLocaleCookie } from "@/lib/i18n-cookie";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { completeAuthForUser } from "@/modules/organizations/application/authCompletionService";
+import { CompleteAuthUseCase } from "@/modules/organizations/application/use-cases/complete-auth-usecase";
 
 export async function GET(request: Request) {
   const supabase = await createSupabaseServerClient();
@@ -39,7 +39,8 @@ export async function GET(request: Request) {
     );
   }
 
-  const result = await completeAuthForUser(prisma, {
+  const useCase = new CompleteAuthUseCase(prisma);
+  const result = await useCase.execute({
     userId: user.id,
     email,
   });

@@ -7,10 +7,7 @@ import {
   AwsProvider,
   fakeAwsBilledResponse,
 } from "./awsProvider";
-import {
-  SyncErrorWithKey,
-  SYNC_ERROR_AWS_INVALID_CREDENTIALS,
-} from "../../domain/cloudProvider";
+import { SYNC_ERROR_AWS_INVALID_CREDENTIALS } from "../../domain/cloudProvider";
 
 function createEncryptionMock(payload: unknown): EncryptionService {
   return {
@@ -179,7 +176,7 @@ describe("AwsProvider.fetchDailySpend – real path (mocked SDK)", () => {
         from: "2025-02-01",
         to: "2025-02-02",
       }),
-    ).rejects.toMatchObject<SyncErrorWithKey>({
+    ).rejects.toMatchObject({
       syncErrorKey: SYNC_ERROR_AWS_INVALID_CREDENTIALS,
     });
   });

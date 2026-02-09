@@ -7,10 +7,7 @@ import {
   VercelProvider,
   fakeVercelBilledResponse,
 } from "./vercelProvider";
-import {
-  SyncErrorWithKey,
-  SYNC_ERROR_VERCEL_FORBIDDEN,
-} from "../../domain/cloudProvider";
+import { SYNC_ERROR_VERCEL_FORBIDDEN } from "../../domain/cloudProvider";
 
 function createEncryptionMock(payload: unknown): EncryptionService {
   return {
@@ -97,7 +94,6 @@ describe("VercelProvider.fetchDailySpend", () => {
       ),
     });
 
-    // @ts-expect-error override global fetch for test
     global.fetch = fetchMock;
 
     await expect(
@@ -105,7 +101,7 @@ describe("VercelProvider.fetchDailySpend", () => {
         from: "2025-02-01",
         to: "2025-02-02",
       }),
-    ).rejects.toMatchObject<SyncErrorWithKey>({
+    ).rejects.toMatchObject({
       syncErrorKey: SYNC_ERROR_VERCEL_FORBIDDEN,
     });
   });
@@ -123,7 +119,6 @@ describe("VercelProvider.fetchDailySpend", () => {
       text: vi.fn().mockResolvedValue('{"error":"costs_not_found"}'),
     });
 
-    // @ts-expect-error override global fetch for test
     global.fetch = fetchMock;
 
     const rows = await provider.fetchDailySpend(baseAccount, {

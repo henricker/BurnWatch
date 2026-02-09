@@ -3,11 +3,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import {
-  removeMember,
-  MemberError,
-  MemberForbiddenError,
-} from "@/modules/organizations/application/memberService";
+import { RemoveMemberUseCase } from "@/modules/organizations/application/use-cases/remove-member-usecase";
+import { MemberError, MemberForbiddenError } from "@/modules/organizations/domain/member";
 
 export async function DELETE(
   _request: Request,
@@ -28,7 +25,8 @@ export async function DELETE(
 
   let removedUserId: string;
   try {
-    const result = await removeMember(prisma, {
+    const useCase = new RemoveMemberUseCase(prisma);
+    const result = await useCase.execute({
       requesterUserId: user.id,
       profileIdToRemove: profileId,
     });

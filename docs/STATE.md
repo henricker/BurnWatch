@@ -1,6 +1,6 @@
-# BurnWatch – STATE (Milestone 06 – AWS Integration concluído)
+# BurnWatch – STATE (Milestone 06.5 – Backend Architecture Improvements concluído)
 
-Este documento resume o estado atual da base de código após a conclusão do **Milestone 06: AWS Integration** e dos anteriores (incl. **Milestone 05: The "Aha!" Dashboard**). Inclui Milestones 01–04 (auth, organizações, membros, i18n, Configurações, Conexões Cloud, adapter-engine (ICloudProvider, VercelProvider com Billing API, SyncService, DailySpend por `cloudAccountId`), tratamento de erro 403/token inválido (chave `vercel-forbidden-error-sync` + traduções + tooltip), UX de estado “A sincronizar…” com prioridade e limpeza ao receber resposta, e validação de token Vercel em formato alfanumérico (ex. `R1O1lKO7v8L0svh4dTbw6pfu`). Inclui ainda o **módulo de analytics** (getDashboardAnalytics, evolução por provedor, projeção MTD, anomalia Z-score, resource breakdown, spend by category), **GET /api/analytics** e o dashboard com gráfico de evolução, métricas e i18n completo. Serve como contexto para outras AIs continuarem o trabalho.
+Este documento resume o estado atual da base de código após a conclusão do **Milestone 06.5: Backend Architecture Improvements (Arch Improvements)** e dos anteriores (incl. **Milestone 06: AWS Integration**, **Milestone 05: The "Aha!" Dashboard**). Inclui Milestones 01–04 (auth, organizações, membros, i18n, Configurações, Conexões Cloud, adapter-engine (ICloudProvider, VercelProvider com Billing API, SyncService, DailySpend por `cloudAccountId`), tratamento de erro 403/token inválido (chave `vercel-forbidden-error-sync` + traduções + tooltip), UX de estado “A sincronizar…” com prioridade e limpeza ao receber resposta, e validação de token Vercel em formato alfanumérico (ex. `R1O1lKO7v8L0svh4dTbw6pfu`). Inclui ainda o **módulo de analytics** (getDashboardAnalytics, evolução por provedor, projeção MTD, anomalia Z-score, resource breakdown, spend by category), **GET /api/analytics** e o dashboard com gráfico de evolução, métricas e i18n completo. O **Milestone 06.5** consolidou a arquitetura backend: use cases em classes, uma pasta por use case (kebab-case) com `index.ts` e `index.spec.ts`, layout domain/application/infrastructure por módulo, rotas API finas e 105 testes passando. Serve como contexto para outras AIs continuarem o trabalho.
 
 ---
 
@@ -289,7 +289,7 @@ Arquivos: `src/modules/analytics/application/analyticsService.ts`, `serviceNameT
 ### Configuração
 
 - Arquivo: `vitest.config.ts`
-  - `environment: "node"`, `globals: true`, `include: ["src/**/*.test.ts"]`.
+  - `environment: "node"`, `globals: true`, `include: ["src/**/*.test.ts", "src/**/*.spec.ts"]`.
 - Script em `package.json`:
   - `"test": "vitest"`.
 
@@ -409,6 +409,8 @@ Comparado à descrição em `docs/sprints/SPRINT_01.md` (Milestone 2), o que foi
 **Milestone 04 concluído – The Adapter Engine (Vercel Implementation):** Módulo `adapter-engine` com ICloudProvider, VercelProvider (Billing API real), SyncService e DailySpend por `cloudAccountId`; POST `/api/cloud-accounts/[id]` para sync; tratamento de 403/token inválido (chave `vercel-forbidden-error-sync` + traduções + tooltip); UX de estado “A sincronizar…” com prioridade e limpeza ao receber resposta; **bulk upsert** por dia em DailySpend (sync completo ~73s → ~35s); loading unificado ao criar conexão (coluna “Último sync”, ícone de sync e Estado desde a primeira renderização); validação de token Vercel em formato alfanumérico (mín. 16 caracteres).
 
 **Milestone 05 concluído – The "Aha!" Dashboard:** Módulo `analytics` com getDashboardAnalytics (evolução por dia/provedor, projeção MTD, daily burn, anomalia Z-score, resource breakdown, spend by category); serviceNameToCategory com categorias Observability e Automation e mapa Vercel; GET /api/analytics; dashboard com gráfico de evolução (múltiplas linhas quando All), métricas, scroll discreto e i18n completo. Testes em `analyticsService.test.ts` (resolveDateRange e getDashboardAnalytics com Prisma mock e fake timers).
+
+**Milestone 06.5 concluído – Backend Architecture Improvements (Arch Improvements):** Use cases em classes (dependências no construtor, `execute()`); layout em três camadas por módulo (domain / application/use-cases / infrastructure); uma pasta por use case em kebab-case com `index.ts` e `index.spec.ts` em todos os módulos (adapter-engine, billing, analytics, cloud-provider-credentials, organizations); rotas API finas; Vitest com `include: ["src/**/*.test.ts", "src/**/*.spec.ts"]`; 105 testes e build passando. Necessário para a evolução sustentável da plataforma.
 
 ---
 

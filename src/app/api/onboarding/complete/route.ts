@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { setLocaleCookie } from "@/lib/i18n-cookie";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { completeOnboarding } from "@/modules/organizations/application/onboardingService";
+import { CompleteOnboardingUseCase } from "@/modules/organizations/application/use-cases/complete-onboarding-usecase";
 
 interface OnboardingBody {
   name?: string;
@@ -40,7 +40,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await completeOnboarding(prisma, {
+    const useCase = new CompleteOnboardingUseCase(prisma);
+    const result = await useCase.execute({
       userId: user.id,
       organizationName: body.name,
       firstName: body.firstName,
