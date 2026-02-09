@@ -50,6 +50,7 @@ type CloudAccountStatus = "SYNCED" | "SYNCING" | "SYNC_ERROR";
 
 /** Keys stored in lastSyncError; map to translated messages in Connections. */
 const SYNC_ERROR_VERCEL_FORBIDDEN = "vercel-forbidden-error-sync";
+const SYNC_ERROR_AWS_INVALID_CREDENTIALS = "aws-invalid-credentials-error";
 
 type AccountRow = {
   id: string;
@@ -471,7 +472,9 @@ export function ConnectionsView() {
                                   <TooltipContent side="top" className="max-w-xs">
                                     {acc.lastSyncError === SYNC_ERROR_VERCEL_FORBIDDEN
                                       ? t("syncErrorVercelForbidden")
-                                      : acc.lastSyncError}
+                                      : acc.lastSyncError === SYNC_ERROR_AWS_INVALID_CREDENTIALS
+                                        ? t("syncErrorAwsInvalidCredentials")
+                                        : acc.lastSyncError}
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>

@@ -6,6 +6,7 @@ import type { EncryptionService } from "@/lib/security/encryption";
 import type { DailySpendData, ICloudProvider } from "../domain/cloudProvider";
 import { SyncErrorWithKey } from "../domain/cloudProvider";
 import { MockProvider } from "../infrastructure/providers/mockProvider";
+import { AwsProvider } from "../infrastructure/providers/awsProvider";
 import { VercelProvider } from "../infrastructure/providers/vercelProvider";
 
 export class SyncError extends Error {
@@ -61,6 +62,7 @@ function getProvider(
     case "VERCEL":
       return new VercelProvider(encryption);
     case "AWS":
+      return new AwsProvider(encryption);
     case "GCP":
     case "OTHER":
       return new MockProvider();

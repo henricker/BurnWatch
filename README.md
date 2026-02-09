@@ -58,7 +58,7 @@ Identify "Zombies"—forgotten instances, idle GPUs, and orphaned storage volume
 
 **Em foco – Sprint 02: Multi-Cloud Expansion & Business Readiness**
 
-- **M6 – AWS Integration:** Cost Explorer SDK, IAM billing policy guide, mapping EC2/RDS/S3/Lambda, backfill com lag até 24h.
+- **M6 – AWS Integration:** `AwsProvider` usando Cost Explorer SDK (`@aws-sdk/client-cost-explorer`, `GetCostAndUsage` diário por `SERVICE`), modo fake controlado por `USE_FAKE_AWS_BILLING`, tratamento de credencial inválida (`aws-invalid-credentials-error`); próximos passos: IAM billing policy guide e refinamento de mapping EC2/RDS/S3/Lambda.
 - **M7 – GCP Integration:** Cloud Billing API (ou BigQuery export), Service Account JSON encriptado, mapping Cloud Run/GCE/Cloud SQL.
 - **M8 – Notification Engine:** Webhooks por organização (Slack, Discord), Burn do Dia e Alerta de Spike, trigger por anomalia (Z-score > 2).
 - **M9 – Monetization:** Stripe Checkout (Starter R$ 97 / $49, Pro R$ 197 / $149), Usage Guards (soft block), pricing regional (`bw_market`).
@@ -77,6 +77,8 @@ pnpm dev
 ```
 
 Required env vars and details: **§9** in `docs/STATE.md`.
+
+GitHub Actions CI: `.github/workflows/ci.yml` roda `pnpm lint`, `pnpm test` e `pnpm build` em cada push/PR para `main`, com billing fake para AWS/Vercel por padrão.
 
 ---
 

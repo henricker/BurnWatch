@@ -8,14 +8,24 @@ Expandir o poder de fogo do BurnWatch integrando os "pesos pesados" da nuvem (AW
 
 ## 🏗 Milestone 06: AWS Integration (The Giant)
 
+**Status:** Em progresso – adapter técnico implementado e testado.
+
 **Meta:** Implementar o adapter real para a AWS utilizando a API do Cost Explorer.
 
-### Requisitos Técnicos
+### Entregues até agora
 
-- **AWS Adapter:** Implementar a lógica de busca via SDK da AWS (`@aws-sdk/client-cost-explorer`).
-- **IAM Policy Guide:** Criar a documentação interna/instrução para o utilizador criar uma policy ReadOnlyAccess específica de Billing.
-- **Mapping:** Mapear serviços complexos (EC2, RDS, S3, Lambda) para as nossas categorias universais.
-- **Granularidade:** Garantir que o backfill diário funcione com o lag de processamento da AWS (até 24h).
+- **AWS Adapter:** `AwsProvider` em `src/modules/adapter-engine/infrastructure/providers/awsProvider.ts` usando `@aws-sdk/client-cost-explorer` (`GetCostAndUsageCommand` com `Granularity: "DAILY"`, `Metrics: ["UnblendedCost"]`, `GroupBy` por `SERVICE`), normalizando `Amount` para `amountCents` e mapeando serviços (EC2, RDS, S3, Lambda, etc.) para o nosso modelo de `DailySpendData`.
+- **Erro de credencial:** tratamento de erros como `InvalidClientTokenId`/`InvalidSignatureException`/`AccessDeniedException` via `SyncErrorWithKey` com chave `aws-invalid-credentials-error`, exibida com mensagem traduzida em Connections.
+- **Modo fake:** `fakeAwsBilledResponse(range)` com valores diários em torno de uma média (pouca variância), ativado por `USE_FAKE_AWS_BILLING=\"true\"` para desenvolvimento/local (sem chamadas reais à AWS).
+- **Integração com SyncService:** `SyncService` agora usa `AwsProvider` quando `provider === \"AWS\"` e continua a usar `VercelProvider` para Vercel e `MockProvider` para GCP/OTHER.
+- **Testes:** `awsProvider.test.ts` cobre o fake, a normalização da resposta do Cost Explorer e o path de erro de credenciais; `syncService.test.ts` mocka `AwsProvider` para garantir fluxo SYNCING → SYNCED.
+- **CI:** workflow GitHub Actions (`.github/workflows/ci.yml`) executa `pnpm lint`, `pnpm test` e `pnpm build` em push/PR para `main`, com `USE_FAKE_AWS_BILLING=true` e `USE_FAKE_VERCEL_BILLING=true` por padrão.
+
+### Próximos passos
+
+- **IAM Policy Guide:** Criar documentação/instrução para o utilizador provisionar uma policy **ReadOnlyAccess** específica de Billing (Cost Explorer) com o mínimo de permissões.
+- **Mapping adicional:** Refinar o mapping de serviços AWS para categorias (ex.: diferenciar `EC2 Spot`, `EBS`, `NAT Gateway`) usando `serviceNameToCategory`.
+- **Hardening de produção:** Validar a integração real em contas AWS de staging/produção (latência, limites de Cost Explorer, retries).
 
 ---
 

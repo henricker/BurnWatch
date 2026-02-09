@@ -229,7 +229,8 @@
     "failedToCreate": "Failed to create connection.",
     "failedToUpdate": "Failed to update.",
     "failedToDelete": "Failed to delete.",
-    "syncErrorVercelForbidden": "Vercel token invalid or not authorized. Check the account credentials and try again."
+    "syncErrorVercelForbidden": "Vercel token invalid or not authorized. Check the account credentials and try again.",
+    "syncErrorAwsInvalidCredentials": "AWS credentials invalid or not authorized. Check the IAM user/role and try again."
   },
   "Settings": {
     "title": "Settings",
