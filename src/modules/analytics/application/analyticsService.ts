@@ -19,7 +19,6 @@ function addDays(d: Date, n: number): Date {
 function daysInMonth(d: Date): number {
   const year = d.getUTCFullYear();
   const month = d.getUTCMonth();
-  const first = new Date(Date.UTC(year, month, 1));
   const last = new Date(Date.UTC(year, month + 1, 0));
   return last.getUTCDate();
 }

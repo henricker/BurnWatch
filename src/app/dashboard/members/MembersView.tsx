@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import type { Role } from "@prisma/client";
-import { Users, UserPlus, Search, Shield, Mail, RefreshCw, X, Clock } from "lucide-react";
+import { Users, Search, Shield, Mail, Clock } from "lucide-react";
 import { canManageMembers } from "@/lib/roles";
 
 import { InviteMemberButton } from "./InviteMemberButton";
@@ -113,7 +113,6 @@ export function MembersView({
     const q = searchQuery.trim().toLowerCase();
     return members.filter((m) => {
       const name = [m.firstName, m.lastName].filter(Boolean).join(" ").toLowerCase();
-      const email = ""; // we don't have email on MemberRow; filter by name only
       return name.includes(q);
     });
   }, [members, searchQuery]);
@@ -143,7 +142,6 @@ export function MembersView({
           {allowManage && (
             <InviteMemberButton
               organizationId={organizationId}
-              currentUserRole={profileRole}
               allowInviteAdmin={allowInviteAdmin}
               buttonLabel={t("newMemberButton")}
             />

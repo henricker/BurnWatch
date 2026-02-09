@@ -110,19 +110,19 @@ describe("AwsProvider.fetchDailySpend – real path (mocked SDK)", () => {
       ],
     });
 
-    vi.doMock("@aws-sdk/client-cost-explorer", () => {
-      const LocalSendMock = sendMock;
-      class CostExplorerClient {
-         
-        send = LocalSendMock;
-        constructor(_: unknown) {}
-      }
-      class GetCostAndUsageCommand {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        constructor(_input: unknown) {}
-      }
-      return { CostExplorerClient, GetCostAndUsageCommand };
-    });
+    vi.doMock("@aws-sdk/client-cost-explorer", () => ({
+      CostExplorerClient: class {
+        constructor(config: unknown) {
+          void config;
+        }
+        send = sendMock;
+      },
+      GetCostAndUsageCommand: class {
+        constructor(input: unknown) {
+          void input;
+        }
+      },
+    }));
 
     const { AwsProvider: AwsProviderMocked } = await import("./awsProvider");
     const encryption = createEncryptionMock({
@@ -153,19 +153,19 @@ describe("AwsProvider.fetchDailySpend – real path (mocked SDK)", () => {
       .fn()
       .mockRejectedValue({ name: "InvalidClientTokenId", message: "The security token included in the request is invalid." });
 
-    vi.doMock("@aws-sdk/client-cost-explorer", () => {
-      const LocalSendMock = sendMock;
-      class CostExplorerClient {
-         
-        send = LocalSendMock;
-        constructor(_: unknown) {}
-      }
-      class GetCostAndUsageCommand {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        constructor(_input: unknown) {}
-      }
-      return { CostExplorerClient, GetCostAndUsageCommand };
-    });
+    vi.doMock("@aws-sdk/client-cost-explorer", () => ({
+      CostExplorerClient: class {
+        constructor(config: unknown) {
+          void config;
+        }
+        send = sendMock;
+      },
+      GetCostAndUsageCommand: class {
+        constructor(input: unknown) {
+          void input;
+        }
+      },
+    }));
 
     const { AwsProvider: AwsProviderMocked } = await import("./awsProvider");
     const encryption = createEncryptionMock({

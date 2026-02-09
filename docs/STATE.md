@@ -1,6 +1,6 @@
-# BurnWatch – STATE (Milestone 05 – Dashboard Analytics)
+# BurnWatch – STATE (Milestone 06 – AWS Integration concluído)
 
-Este documento resume o estado atual da base de código após a conclusão do **Milestone 05: The "Aha!" Dashboard** e dos anteriores. Inclui Milestones 01–04 (auth, organizações, membros, i18n, Configurações, Conexões Cloud, adapter-engine (ICloudProvider, VercelProvider com Billing API, SyncService, DailySpend por `cloudAccountId`), tratamento de erro 403/token inválido (chave `vercel-forbidden-error-sync` + traduções + tooltip), UX de estado “A sincronizar…” com prioridade e limpeza ao receber resposta, e validação de token Vercel em formato alfanumérico (ex. `R1O1lKO7v8L0svh4dTbw6pfu`). Inclui ainda o **módulo de analytics** (getDashboardAnalytics, evolução por provedor, projeção MTD, anomalia Z-score, resource breakdown, spend by category), **GET /api/analytics** e o dashboard com gráfico de evolução, métricas e i18n completo. Serve como contexto para outras AIs continuarem o trabalho.
+Este documento resume o estado atual da base de código após a conclusão do **Milestone 06: AWS Integration** e dos anteriores (incl. **Milestone 05: The "Aha!" Dashboard**). Inclui Milestones 01–04 (auth, organizações, membros, i18n, Configurações, Conexões Cloud, adapter-engine (ICloudProvider, VercelProvider com Billing API, SyncService, DailySpend por `cloudAccountId`), tratamento de erro 403/token inválido (chave `vercel-forbidden-error-sync` + traduções + tooltip), UX de estado “A sincronizar…” com prioridade e limpeza ao receber resposta, e validação de token Vercel em formato alfanumérico (ex. `R1O1lKO7v8L0svh4dTbw6pfu`). Inclui ainda o **módulo de analytics** (getDashboardAnalytics, evolução por provedor, projeção MTD, anomalia Z-score, resource breakdown, spend by category), **GET /api/analytics** e o dashboard com gráfico de evolução, métricas e i18n completo. Serve como contexto para outras AIs continuarem o trabalho.
 
 ---
 
@@ -410,3 +410,31 @@ Comparado à descrição em `docs/sprints/SPRINT_01.md` (Milestone 2), o que foi
 
 **Milestone 05 concluído – The "Aha!" Dashboard:** Módulo `analytics` com getDashboardAnalytics (evolução por dia/provedor, projeção MTD, daily burn, anomalia Z-score, resource breakdown, spend by category); serviceNameToCategory com categorias Observability e Automation e mapa Vercel; GET /api/analytics; dashboard com gráfico de evolução (múltiplas linhas quando All), métricas, scroll discreto e i18n completo. Testes em `analyticsService.test.ts` (resolveDateRange e getDashboardAnalytics com Prisma mock e fake timers).
 
+---
+
+## 11. CI, Lint e Ajustes Recentes
+
+- **CI (GitHub Actions)** – `.github/workflows/ci.yml`:
+  - **Cache pnpm:** `cache: 'pnpm'` é definido em `actions/setup-node@v4` (não em `pnpm/action-setup`, que ignora `cache: true`). O store pnpm é cacheado entre runs.
+  - **Prisma client:** passo explícito `pnpm prisma generate` após `pnpm install` e antes de Lint/Test, para que `.prisma/client` exista na CI e os testes (ex.: `onboardingService.test.ts`) não falhem com `Cannot find module '.prisma/client/default'`.
+  - Sequência: Checkout → Install pnpm → Setup Node (cache pnpm) → Install deps → **Generate Prisma client** → Lint → Test → Build.
+
+- **Lint (ESLint):**
+  - `pnpm lint` passa com **zero erros e zero warnings**.
+  - Remoção de imports/variáveis não usados em: `LandingContent`, `api/organization/route`, `InviteMemberButton`, `MembersView`, `dashboard/page`, `locale-switcher`, `syncService`, `analyticsService`, `mockProvider`, `awsProvider.test.ts`.
+  - Uso intencional de `<img>` em avatares e imagens decorativas (Landing, MemberAvatar, ProfileEditForm, SettingsView, complete-profile-gate, owner-onboarding-card) com `eslint-disable-next-line @next/next/no-img-element` local.
+  - Padrão “mounted” em theme/locale toggles e app-sidebar mantido com `eslint-disable-next-line react-hooks/set-state-in-effect` onde aplicável; callback de auth com `react-hooks/exhaustive-deps` documentado.
+  - `components/ui/sidebar.tsx`: skeleton com largura fixa (sem `Math.random` em render); `landing-locale-toggle`: escrita de cookie em `useEffect` para respeitar regra de imutabilidade.
+  - `api/organization/route.ts`: `DELETE` sem parâmetro não utilizado.
+
+- **Dashboard (tema claro):**
+  - Ícone/nome do provedor **Vercel** no resource breakdown usa `text-slate-900 dark:text-white` para contraste correto no tema claro (símbolo visível em fundo branco).
+
+- **Dashboard – gráfico de evolução (Milestone 06):**
+  - Visão 30 dias: eixo X com rótulos amostrados (5 pontos: início, 25%, 50%, 75%, fim) para evitar sobreposição; eixo Y com escala em moeda (0, 25%, 50%, 75%, 100% do máximo); linha GCP em verde (`#22c55e`) para visibilidade no dark mode; tooltip no hover com data e valores (AWS, Vercel, GCP, total) do dia correspondente à posição do cursor.
+
+- **Dashboard – gasto por categoria:**
+  - Light mode: container dos ícones com `bg-slate-200/80` e ícone `text-slate-600`; faixa da barra de progresso com `bg-slate-200/70`; no hover, rótulo da categoria com `group-hover:text-slate-900` em vez de branco para manter legibilidade.
+
+- **Sidebar (modo colapsado):**
+  - Header: símbolo BurnWatch com container `size-8` (32px) alinhado aos botões de navegação; padding do header no modo ícone `pl-6 pr-2` para coincidir com o padding efetivo do conteúdo (SidebarContent px-4 + SidebarGroup p-2); texto (nome da org e role) oculto no modo colapsado; modo aberto preservado (layout original com ícone + texto no bloco com borda).

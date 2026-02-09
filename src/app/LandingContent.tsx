@@ -4,7 +4,6 @@ import React, { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import {
-  Zap,
   Check,
   CheckCircle2,
   Cloud,
@@ -405,7 +404,9 @@ export function LandingContent() {
             <MiniCard title={t("teamSync")} desc={t("teamSyncDesc")} icon={<Users size={32} />} />
             <MiniCard title={t("multiCloud")} desc={t("multiCloudDesc")} icon={<RefreshCw size={32} />} />
             <div className="group col-span-2 flex items-center gap-6 rounded-xl border border-zinc-200 bg-white p-6 text-zinc-900 transition-colors hover:border-orange-500/20 dark:border-[#1a1a1a] dark:bg-[#0a0a0a] dark:text-white">
-              <div className="h-12 w-12 overflow-hidden rounded-full border border-zinc-200 bg-zinc-100 grayscale transition-all group-hover:grayscale-0 dark:border-[#1a1a1a] dark:bg-zinc-900">
+              <div className="h-12 w-12 overflow-hidden rounded-full border border-zinc-200 bg-zinc-100 transition-all dark:border-[#1a1a1a] dark:bg-zinc-900">
+                {/* Decorative avatar; keep <img> for now and explicitly ignore Next.js optimization rule */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Infra" alt="" />
               </div>
               <div>

@@ -123,6 +123,8 @@ export function ProfileEditForm({
           <label className="text-sm font-medium text-muted-foreground">{t("avatar")}</label>
           <div className="relative">
             {displayAvatarUrl ? (
+              // Avatar é meramente decorativo no formulário de perfil; manter <img> aqui é intencional.
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={displayAvatarUrl}
                 alt=""

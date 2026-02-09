@@ -236,6 +236,8 @@ export function SettingsView({
                 <div className="group relative">
                   <div className="flex h-28 w-28 overflow-hidden rounded-2xl border-2 border-slate-200 bg-white p-1 transition-all group-hover:border-orange-500/50 dark:border-zinc-800 dark:bg-zinc-900">
                     {displayAvatarUrl ? (
+                      // Avatar é decorativo na UI de settings; manter <img> é intencional.
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={displayAvatarUrl}
                         alt=""

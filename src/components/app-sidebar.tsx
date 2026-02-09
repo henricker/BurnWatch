@@ -129,14 +129,14 @@ export function AppSidebar({
     >
       <div className="absolute left-0 top-0 h-64 w-full bg-gradient-to-b from-orange-500/5 to-transparent pointer-events-none" />
 
-      <SidebarHeader className="relative z-10 p-4 group-data-[collapsible=icon]:px-4 group-data-[collapsible=icon]:py-3">
+      <SidebarHeader className="relative z-10 p-4 group-data-[collapsible=icon]:pl-6 group-data-[collapsible=icon]:pr-2 group-data-[collapsible=icon]:py-3">
         <SidebarMenu>
           <SidebarMenuItem>
-            <div className="flex items-center gap-3 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-[#0a0a0a] px-2 py-1.5 transition-colors">
+            <div className="flex items-center gap-3 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-[#0a0a0a] px-2 py-1.5 transition-colors group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:border-0 group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:p-0">
               <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-orange-500 text-white shadow-lg shadow-orange-500/20">
                 <Zap className="size-4 fill-white" />
               </div>
-              <div className="flex min-w-0 flex-col gap-0.5 leading-none overflow-hidden">
+              <div className="flex min-w-0 flex-col gap-0.5 leading-none overflow-hidden group-data-[collapsible=icon]:hidden">
                 <span className="truncate text-sm font-bold tracking-tight text-slate-900 dark:text-white">
                   {organizationName}
                 </span>

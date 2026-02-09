@@ -167,6 +167,8 @@ export function OwnerOnboardingCard() {
                 />
                 {avatarPreview ? (
                   <div className="relative">
+                    {/* Avatar decorativo no onboarding; manter <img> é intencional. */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={avatarPreview}
                       alt=""

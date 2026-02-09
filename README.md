@@ -56,9 +56,9 @@ Identify "Zombies"—forgotten instances, idle GPUs, and orphaned storage volume
 - **M4 – Adapter Engine (Vercel):** Real ingestion via Vercel Billing API; SyncService with day-by-day backfill and bulk upsert per day (~73s → ~35s); 403/token error handling with translated tooltips; unified loading state when creating a connection or triggering sync.
 - **M5 – The "Aha!" Dashboard:** Analytics module (`getDashboardAnalytics`) with date ranges (7D, 30D, MTD) and provider filter; `GET /api/analytics`; cost evolution chart (multiple lines per provider when "All"), metric cards (total, forecast, daily burn, status), Resource Breakdown, Spend by Category (Observability & Automation); end-of-month projection (MTD), Z-score anomaly detection; full i18n and unit tests for analytics.
 
-**Em foco – Sprint 02: Multi-Cloud Expansion & Business Readiness**
+**Sprint 02: Multi-Cloud Expansion & Business Readiness**
 
-- **M6 – AWS Integration:** `AwsProvider` usando Cost Explorer SDK (`@aws-sdk/client-cost-explorer`, `GetCostAndUsage` diário por `SERVICE`), modo fake controlado por `USE_FAKE_AWS_BILLING`, tratamento de credencial inválida (`aws-invalid-credentials-error`); próximos passos: IAM billing policy guide e refinamento de mapping EC2/RDS/S3/Lambda.
+- **M6 – AWS Integration:** ✅ Concluído. `AwsProvider` com Cost Explorer SDK, modo fake, tratamento de credencial inválida e mensagens traduzidas em Connections; CI com cache pnpm e `prisma generate`; lint sem erros nem warnings; polimento do dashboard (gráfico 30 dias com eixo X/Y e tooltip no hover, gasto por categoria em light mode) e da sidebar (logo alinhado no modo colapsado, modo aberto preservado).
 - **M7 – GCP Integration:** Cloud Billing API (ou BigQuery export), Service Account JSON encriptado, mapping Cloud Run/GCE/Cloud SQL.
 - **M8 – Notification Engine:** Webhooks por organização (Slack, Discord), Burn do Dia e Alerta de Spike, trigger por anomalia (Z-score > 2).
 - **M9 – Monetization:** Stripe Checkout (Starter R$ 97 / $49, Pro R$ 197 / $149), Usage Guards (soft block), pricing regional (`bw_market`).

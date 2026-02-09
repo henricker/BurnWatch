@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Activity,
   AlertTriangle,
@@ -234,10 +234,10 @@ function CategoryItem({
     <div className="group">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded bg-slate-50 dark:bg-zinc-900 text-slate-400 group-hover:text-orange-500 transition-colors">
+          <div className="p-1.5 rounded bg-slate-200/80 dark:bg-zinc-900 text-slate-600 dark:text-slate-400 group-hover:text-orange-500 dark:group-hover:text-orange-500 transition-colors [&_svg]:stroke-[1.5]">
             {icon}
           </div>
-          <span className="text-[11px] font-bold text-slate-600 dark:text-zinc-400 group-hover:text-white dark:group-hover:text-zinc-200 transition-colors uppercase tracking-widest">
+          <span className="text-[11px] font-bold text-slate-600 dark:text-zinc-400 group-hover:text-slate-900 dark:group-hover:text-zinc-200 transition-colors uppercase tracking-widest">
             {label}
           </span>
         </div>
@@ -245,7 +245,7 @@ function CategoryItem({
           {formattedValue}
         </span>
       </div>
-      <div className="w-full bg-slate-50 dark:bg-zinc-900 h-1 rounded-full overflow-hidden shadow-inner">
+      <div className="w-full bg-slate-200/70 dark:bg-zinc-900 h-1 rounded-full overflow-hidden shadow-inner">
         <div
           className={`${colorClass} h-full transition-all duration-1000 ease-out`}
           style={{ width: `${percentage}%` }}
@@ -281,6 +281,12 @@ export default function DashboardPage() {
   const [data, setData] = useState<AnalyticsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [chartHover, setChartHover] = useState<{
+    index: number;
+    x: number;
+    y: number;
+  } | null>(null);
+  const chartContainerRef = useRef<HTMLDivElement>(null);
 
   const fetchAnalytics = useCallback(async () => {
     setLoading(true);
@@ -365,28 +371,20 @@ export default function DashboardPage() {
       ? [
           { stroke: "#f97316", gradientId: "grad-burn-aws", getCents: (e: E) => e.aws },
           { stroke: "#3b82f6", gradientId: "grad-burn-vercel", getCents: (e: E) => e.vercel },
-          { stroke: "#71717a", gradientId: "grad-burn-gcp", getCents: (e: E) => e.gcp },
+          { stroke: "#22c55e", gradientId: "grad-burn-gcp", getCents: (e: E) => e.gcp },
         ]
       : [
           {
             stroke:
               providerFilter === "VERCEL"
                 ? "#3b82f6"
-                : providerFilter === "GCP"
-                  ? "#71717a"
+                :                 providerFilter === "GCP"
+                  ? "#22c55e"
                   : "#f97316",
             gradientId: "grad-burn-single",
             getCents: (e: E) => e.total,
           },
         ];
-
-  const evolutionChartColor = !isAllProviders
-    ? providerFilter === "VERCEL"
-      ? { stroke: "#3b82f6", gradientId: "grad-burn-vercel", stopColor: "#3b82f6" }
-      : providerFilter === "GCP"
-        ? { stroke: "#71717a", gradientId: "grad-burn-gcp", stopColor: "#71717a" }
-        : { stroke: "#f97316", gradientId: "grad-burn-aws", stopColor: "#f97316" }
-    : null;
 
   const evolutionSeriesWithPaths = evolutionSeries.map((s) => {
     const pts = toPoints(s.getCents);
@@ -558,72 +556,156 @@ export default function DashboardPage() {
                 )}
                 {(providerFilter === "ALL" || providerFilter === "GCP") && (
                   <div className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-zinc-400" />
+                    <span className="w-2 h-2 rounded-full bg-green-500" />
                     {t("providerGcp")}
                   </div>
                 )}
               </div>
             </div>
             <div className="flex flex-col w-full relative z-10">
-              <div className="w-full" style={{ height: 220 }}>
-                <svg
-                  className="w-full h-full"
-                  preserveAspectRatio="none"
-                  viewBox={`0 0 ${chartWidth} 300`}
+              <div className="flex w-full" style={{ height: 220 }}>
+                <div
+                  className="flex flex-col justify-between shrink-0 pr-2 text-[10px] font-mono text-slate-400 dark:text-zinc-500 tabular-nums"
+                  style={{ width: "3.5rem" }}
                 >
-                <defs>
-                  {evolutionSeriesWithPaths.map((s) => (
-                    <linearGradient
-                      key={s.gradientId}
-                      id={s.gradientId}
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
-                    >
-                      <stop offset="0%" stopColor={s.stopColor} stopOpacity={isAllProviders ? "0.15" : "0.2"} />
-                      <stop offset="100%" stopColor={s.stopColor} stopOpacity="0" />
-                    </linearGradient>
+                  {[1, 0.75, 0.5, 0.25, 0].map((frac) => (
+                    <span key={frac}>
+                      {formatCurrency(Math.round(maxEvolutionTotal * frac))}
+                    </span>
                   ))}
-                </defs>
-                {[0, 1, 2, 3].map((i) => (
-                  <line
-                    key={i}
-                    x1="0"
-                    y1={i * 75 + 30}
-                    x2={chartWidth}
-                    y2={i * 75 + 30}
-                    stroke="currentColor"
-                    className="text-slate-100 dark:text-zinc-900"
-                    strokeWidth="1"
-                  />
-                ))}
-                {evolutionSeriesWithPaths.map((s) => (
-                  <g key={s.gradientId}>
-                    {s.pathD && <path d={s.pathD} fill={`url(#${s.gradientId})`} />}
-                    {s.lineD && (
-                      <path
-                        d={s.lineD}
-                        fill="none"
-                        stroke={s.stroke}
-                        strokeWidth={isAllProviders ? 2 : 3}
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    )}
-                  </g>
-                ))}
-              </svg>
-              </div>
-              <div className="shrink-0 flex justify-between mt-3 px-1 pb-0.5">
-                {evolution.map((item) => (
-                  <span
-                    key={item.date}
-                    className="text-[10px] text-slate-400 dark:text-zinc-600 font-mono uppercase tracking-tighter"
+                </div>
+                <div
+                  ref={chartContainerRef}
+                  className="flex-1 min-w-0 h-full relative cursor-crosshair"
+                  onMouseMove={(e) => {
+                    if (evolution.length === 0) return;
+                    const el = chartContainerRef.current;
+                    if (!el) return;
+                    const rect = el.getBoundingClientRect();
+                    const frac = (e.clientX - rect.left) / rect.width;
+                    const index = Math.min(
+                      evolution.length - 1,
+                      Math.max(0, Math.round(frac * (evolution.length - 1 || 1)))
+                    );
+                    setChartHover({ index, x: e.clientX, y: e.clientY });
+                  }}
+                  onMouseLeave={() => setChartHover(null)}
+                >
+                  <svg
+                    className="w-full h-full pointer-events-none"
+                    preserveAspectRatio="none"
+                    viewBox={`0 0 ${chartWidth} 300`}
                   >
-                    {item.label}
-                  </span>
-                ))}
+                    <defs>
+                      {evolutionSeriesWithPaths.map((s) => (
+                        <linearGradient
+                          key={s.gradientId}
+                          id={s.gradientId}
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop offset="0%" stopColor={s.stopColor} stopOpacity={isAllProviders ? "0.15" : "0.2"} />
+                          <stop offset="100%" stopColor={s.stopColor} stopOpacity="0" />
+                        </linearGradient>
+                      ))}
+                    </defs>
+                    {[0, 1, 2, 3].map((i) => (
+                      <line
+                        key={i}
+                        x1="0"
+                        y1={i * 75 + 30}
+                        x2={chartWidth}
+                        y2={i * 75 + 30}
+                        stroke="currentColor"
+                        className="text-slate-100 dark:text-zinc-900"
+                        strokeWidth="1"
+                      />
+                    ))}
+                    {evolutionSeriesWithPaths.map((s) => (
+                      <g key={s.gradientId}>
+                        {s.pathD && <path d={s.pathD} fill={`url(#${s.gradientId})`} />}
+                        {s.lineD && (
+                          <path
+                            d={s.lineD}
+                            fill="none"
+                            stroke={s.stroke}
+                            strokeWidth={isAllProviders ? 2 : 3}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        )}
+                      </g>
+                    ))}
+                  </svg>
+                  {chartHover !== null && evolution[chartHover.index] && (
+                    <div
+                      className="pointer-events-none fixed z-50 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 shadow-lg"
+                      style={{
+                        left: chartHover.x,
+                        top: chartHover.y,
+                        transform: "translate(-50%, calc(-100% - 8px))",
+                      }}
+                    >
+                      <div className="text-[10px] font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1.5">
+                        {evolution[chartHover.index].label}
+                      </div>
+                      <div className="space-y-1 text-xs font-mono tabular-nums text-slate-800 dark:text-zinc-200">
+                        {isAllProviders ? (
+                          <>
+                            <div className="flex justify-between gap-4">
+                              <span className="text-orange-500">{t("providerAws")}</span>
+                              <span>{formatCurrency(evolution[chartHover.index].aws)}</span>
+                            </div>
+                            <div className="flex justify-between gap-4">
+                              <span className="text-blue-500">{t("providerVercel")}</span>
+                              <span>{formatCurrency(evolution[chartHover.index].vercel)}</span>
+                            </div>
+                            <div className="flex justify-between gap-4">
+                              <span className="text-green-500">{t("providerGcp")}</span>
+                              <span>{formatCurrency(evolution[chartHover.index].gcp)}</span>
+                            </div>
+                            <div className="flex justify-between gap-4 pt-1 border-t border-slate-100 dark:border-zinc-800">
+                              <span className="font-semibold">{t("totalSpendLabel")}</span>
+                              <span>{formatCurrency(evolution[chartHover.index].total)}</span>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="flex justify-between gap-4">
+                            <span className="font-semibold">{t("totalSpendLabel")}</span>
+                            <span>{formatCurrency(evolution[chartHover.index].total)}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex mt-3">
+                <div className="shrink-0" style={{ width: "3.5rem" }} />
+                <div className="flex-1 min-w-0 relative h-5 px-1 pb-0.5">
+                  {evolution.length > 0 &&
+                    (() => {
+                      const n = evolution.length;
+                      const indices =
+                        n <= 8
+                          ? Array.from({ length: n }, (_, i) => i)
+                          : [0, Math.floor(n * 0.25), Math.floor(n * 0.5), Math.floor(n * 0.75), n - 1];
+                      return indices.map((idx) => (
+                        <span
+                          key={evolution[idx].date}
+                          className="absolute text-[10px] text-slate-400 dark:text-zinc-600 font-mono uppercase tracking-tighter whitespace-nowrap"
+                          style={{
+                            left: `${(idx / (n - 1 || 1)) * 100}%`,
+                            transform: "translateX(-50%)",
+                          }}
+                        >
+                          {evolution[idx].label}
+                        </span>
+                      ));
+                    })()}
+                </div>
               </div>
             </div>
           </div>

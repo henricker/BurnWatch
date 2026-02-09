@@ -148,6 +148,8 @@ function AuthCallbackContent() {
     }
 
     void confirmSession();
+    // `t` is intentionally not in the dependency array to avoid resubscribing on locale changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router, searchParams]);
 
   return (

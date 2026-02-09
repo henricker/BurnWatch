@@ -3,7 +3,7 @@ import type { CloudAccount, PrismaClient } from "@prisma/client";
 import { upsertDailySpendBulk } from "@/modules/billing/application/dailySpendService";
 import type { EncryptionService } from "@/lib/security/encryption";
 
-import type { DailySpendData, ICloudProvider } from "../domain/cloudProvider";
+import type { ICloudProvider } from "../domain/cloudProvider";
 import { SyncErrorWithKey } from "../domain/cloudProvider";
 import { MockProvider } from "../infrastructure/providers/mockProvider";
 import { AwsProvider } from "../infrastructure/providers/awsProvider";

@@ -15,8 +15,6 @@ import {
 import { useLocaleOverride } from "@/components/locale-override-provider";
 import { isValidLocale, type Locale } from "@/i18n/locales";
 
-const LOCALES: Locale[] = ["pt", "en", "es"];
-
 export function LocaleSwitcher({
   organizationId,
   currentLocale = "pt",
