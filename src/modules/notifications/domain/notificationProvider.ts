@@ -1,4 +1,4 @@
-import type { AnomalyAlert, MultiCloudAnomalyReport } from "./types";
+import type { MultiCloudAnomalyReport } from "./types";
 import type { NotificationLocale } from "./notificationMessages";
 
 /**

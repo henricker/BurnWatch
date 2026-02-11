@@ -22,7 +22,7 @@ export class SlackProvider implements INotificationProvider {
       .replace("{organizationName}", report.organizationName)
       .replace("{totalImpact}", totalImpact);
 
-    const blocks: any[] = [
+    const blocks: Record<string, unknown>[] = [
       {
         type: "header",
         text: {
@@ -122,7 +122,7 @@ export class SlackProvider implements INotificationProvider {
     await this.postToSlack(webhookUrl, payload);
   }
 
-  private async postToSlack(url: string, payload: any) {
+  private async postToSlack(url: string, payload: Record<string, unknown>) {
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -131,8 +131,9 @@ export class SlackProvider implements INotificationProvider {
 
     if (!res.ok) {
       const body = await res.text();
-      console.error(`Slack webhook failed: ${res.status} ${body}`);
-      throw new Error(`Slack webhook failed: ${res.status} ${body}`);
+      console.error(`Slack webhook failed: ${res.status}`, body.slice(0, 200));
+      const shortMessage = res.statusText ? `${res.status} ${res.statusText}` : String(res.status);
+      throw new Error(`Slack webhook failed: ${shortMessage}`);
     }
   }
 

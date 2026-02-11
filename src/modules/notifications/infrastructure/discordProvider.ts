@@ -117,7 +117,7 @@ export class DiscordProvider implements INotificationProvider {
     return "☁️";
   }
 
-  private async postToDiscord(url: string, payload: any) {
+  private async postToDiscord(url: string, payload: Record<string, unknown>) {
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -126,8 +126,9 @@ export class DiscordProvider implements INotificationProvider {
 
     if (!res.ok) {
       const body = await res.text();
-      console.error(`Discord webhook failed: ${res.status} ${body}`);
-      throw new Error(`Discord webhook failed: ${res.status} ${body}`);
+      console.error(`Discord webhook failed: ${res.status}`, body.slice(0, 200));
+      const shortMessage = res.statusText ? `${res.status} ${res.statusText}` : String(res.status);
+      throw new Error(`Discord webhook failed: ${shortMessage}`);
     }
   }
 }
