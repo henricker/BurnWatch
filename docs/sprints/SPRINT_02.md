@@ -73,13 +73,18 @@ Necessário para a evolução da plataforma: código mais legível, testes alinh
 
 ## 🔔 Milestone 08: Notification Engine (Retention)
 
+**Status:** ✅ Concluído.
+
 **Meta:** Proatividade fora do browser via Slack e Discord.
 
-### Requisitos Técnicos
+### Entregues
 
-- **Webhook Central:** Configuração de URLs por organização (Slack e Discord).
-- **Payloads Inteligentes:** Formatação de mensagens que mostram o "Burn do Dia" e o "Alerta de Spike".
-- **Trigger de Anomalia:** Disparo imediato se o Z-Score detetar um desvio padrão > 2.0.
+- **Webhook Central:** Configuração de URLs por organização em `Organization` (`slackWebhookUrl`, `discordWebhookUrl`, `notificationSettings` com `anomaly`, `dailySummary`, `limitWarning`). APIs `GET/PATCH /api/notifications` e `POST /api/notifications/test` (teste com URL opcional no body).
+- **Payloads por locale:** Todas as mensagens (Slack e Discord) vêm de `notificationMessages.ts` em pt/en/es; locale do OWNER da organização é resolvido via `getOwnerLocale` e passado aos providers — sem texto chumbado nos providers.
+- **Use cases:** `SendAnomalyAlertUseCase` (report consolidado MultiCloudAnomalyReport para webhooks configurados quando `notificationSettings.anomaly` é true); `TestWebhookConnectionUseCase` (mensagem de teste, suporta URL no body para testar sem gravar); `TriggerAnomalyAlertAfterSyncUseCase` (classe com `execute({ organizationId })`: busca dailySpend dos últimos 14 dias, agrupa por provider/serviço, regra Z-Score > 2 + valor > $1 + spike > 20%, constrói report e chama SendAnomalyAlert; erros engolidos).
+- **Trigger de Anomalia:** Após sync com sucesso (`POST /api/cloud-accounts/[id]` → status SYNCED), `TriggerAnomalyAlertAfterSyncUseCase` é executado em fire-and-forget.
+- **UI:** Página `/dashboard/notifications` com inputs Slack/Discord; botão "Test" ativo só quando há URL; botão "Save" ativo só quando o valor difere do gravado; teste sem gravar suportado.
+- **Testes:** SlackProvider, DiscordProvider, SendAnomalyAlertUseCase, TestWebhookConnectionUseCase, TriggerAnomalyAlertAfterSyncUseCase com `index.spec.ts`; 137 testes no total.
 
 ---
 
