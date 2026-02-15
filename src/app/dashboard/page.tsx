@@ -20,15 +20,26 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
+import { Skeleton } from "@/components/ui/skeleton";
 import { fetchWithRetry } from "@/lib/safe-fetch";
 
 /** API response shape (all monetary values in cents). */
+interface AnomalyDetailItem {
+  provider: string;
+  serviceName: string;
+  currentSpend: number;
+  averageSpend: number;
+  spikePercent: number;
+  zScore: number;
+}
+
 interface AnalyticsResponse {
   totalCents: number;
   trendPercent: number | null;
   forecastCents: number | null;
   dailyBurnCents: number;
   anomalies: number;
+  anomalyDetails: AnomalyDetailItem[];
   evolution: Array<{
     date: string;
     label: string;
@@ -65,6 +76,8 @@ function StatCardSmall({
   trendType,
   description,
   highlight = false,
+  isLoading = false,
+  valueVariant,
 }: {
   label: string;
   value: string;
@@ -72,10 +85,19 @@ function StatCardSmall({
   trendType: "up" | "down" | "neutral";
   description?: string;
   highlight?: boolean;
+  isLoading?: boolean;
+  /** Status card: "healthy" = emerald, "alert" = red; omit for default (neutral) */
+  valueVariant?: "healthy" | "alert";
 }) {
   const borderClass = highlight
     ? "border-orange-500/30"
     : "border-slate-200 dark:border-zinc-800";
+  const valueColorClass =
+    valueVariant === "healthy"
+      ? "text-emerald-500 dark:text-emerald-400"
+      : valueVariant === "alert"
+        ? "text-red-500 dark:text-red-400"
+        : "text-slate-900 dark:text-white";
   return (
     <div
       className={`bg-white dark:bg-[#0a0a0a] border rounded-2xl p-5 transition-all relative overflow-hidden ${borderClass}`}
@@ -84,7 +106,7 @@ function StatCardSmall({
         <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-zinc-600">
           {label}
         </p>
-        {trend != null && (
+        {!isLoading && trend != null && (
           <div
             className={`text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 ${
               trendType === "up"
@@ -101,13 +123,29 @@ function StatCardSmall({
         )}
       </div>
       <div className="flex items-baseline gap-1.5 relative z-10">
-        <span className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-          {value}
-        </span>
-        {description != null && (
-          <span className="text-[9px] font-mono text-slate-400 dark:text-zinc-600 uppercase italic">
-            {description}
-          </span>
+        {isLoading ? (
+          <Skeleton className="h-8 w-24 rounded" />
+        ) : (
+          <>
+            {(valueVariant === "healthy" || valueVariant === "alert") && (
+              <span
+                className={`inline-block w-2 h-2 rounded-full shrink-0 ${
+                  valueVariant === "healthy"
+                    ? "bg-emerald-500 dark:bg-emerald-400"
+                    : "bg-red-500 dark:bg-red-400"
+                }`}
+                aria-hidden
+              />
+            )}
+            <span className={`text-2xl font-bold tracking-tight ${valueColorClass}`}>
+              {value}
+            </span>
+            {description != null && (
+              <span className="text-[9px] font-mono text-slate-400 dark:text-zinc-600 uppercase italic">
+                {description}
+              </span>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -215,6 +253,84 @@ function ProviderDrillDown({
   );
 }
 
+/** Anomaly row: provider with chevron, expandable list of anomalous services (same pattern as ProviderDrillDown). */
+function AnomalyProviderDrillDown({
+  providerName,
+  services,
+  icon,
+  colorClass,
+  iconBgClass,
+  serviceCountLabel,
+}: {
+  providerName: string;
+  services: AnomalyDetailItem[];
+  icon: React.ReactNode;
+  colorClass: string;
+  iconBgClass: string;
+  serviceCountLabel: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const maxSpike = Math.max(...services.map((s) => s.spikePercent), 0);
+  return (
+    <div
+      className={`border-b border-orange-200/50 dark:border-orange-900/30 last:border-0 transition-all ${
+        isOpen ? "bg-orange-50/20 dark:bg-orange-950/10" : ""
+      }`}
+    >
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between p-4 hover:bg-orange-50/30 dark:hover:bg-orange-950/20 transition-all group"
+      >
+        <div className="flex items-center gap-3">
+          <div
+            className={`p-2 rounded-lg ${iconBgClass} ${colorClass} transition-transform ${isOpen ? "rotate-90" : ""}`}
+          >
+            {isOpen ? (
+              <ChevronDown size={14} />
+            ) : (
+              <ChevronRight size={14} />
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={colorClass}>{icon}</span>
+            <span className="text-xs font-black uppercase tracking-widest text-slate-900 dark:text-zinc-200">
+              {providerName}
+            </span>
+          </div>
+        </div>
+        <div className="flex items-baseline gap-2">
+          <span className="text-xs font-mono font-bold text-orange-600 dark:text-orange-500">
+            +{maxSpike}%
+          </span>
+          <span className="text-[9px] text-slate-400 dark:text-zinc-600">
+            {serviceCountLabel}
+          </span>
+        </div>
+      </button>
+      {isOpen && (
+        <div className="px-12 pb-6 animate-in slide-in-from-top-2 duration-300">
+          <div className="space-y-1">
+            {services.map((a, idx) => (
+              <div
+                key={`${a.serviceName}-${idx}`}
+                className="flex items-center justify-between py-2 group/item"
+              >
+                <span className="text-[10px] font-mono text-slate-400 dark:text-zinc-500 group-hover/item:text-slate-200 dark:group-hover/item:text-zinc-200 transition-colors uppercase tracking-wider">
+                  {a.serviceName}
+                </span>
+                <span className="text-[10px] font-mono font-bold text-orange-600 dark:text-orange-500">
+                  +{a.spikePercent}%
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function CategoryItem({
   label,
   cents,
@@ -303,12 +419,13 @@ export default function DashboardPage() {
       const json = (await res.json()) as AnalyticsResponse;
       setData(json);
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("errorLoading"));
+      const message = e instanceof Error ? e.message : null;
+      setError(message ?? "errorLoading");
       setData(null);
     } finally {
       setLoading(false);
     }
-  }, [dateRange, providerFilter, t]);
+  }, [dateRange, providerFilter]);
 
   useEffect(() => {
     void fetchAnalytics();
@@ -316,6 +433,7 @@ export default function DashboardPage() {
 
   const totalCents = data?.totalCents ?? 0;
   const trendPercent = data?.trendPercent ?? null;
+  const anomalyDetails = data?.anomalyDetails ?? [];
   const trendStr =
     trendPercent != null
       ? `${trendPercent >= 0 ? "+" : ""}${trendPercent.toFixed(1)}%`
@@ -485,7 +603,7 @@ export default function DashboardPage() {
 
         {error && (
           <div className="rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/20 px-4 py-3 text-sm text-red-600 dark:text-red-400">
-            {error}
+            {error === "errorLoading" ? t("errorLoading") : error}
           </div>
         )}
 
@@ -493,38 +611,41 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCardSmall
             label={`${t("totalSpendLabel")} ${t(`dateRange${dateRange}` as "dateRange7D" | "dateRange30D" | "dateRangeMTD")}`}
-            value={loading ? t("loading") : formatCurrency(totalCents)}
-            trend={loading ? undefined : trendStr}
+            value={formatCurrency(totalCents)}
+            trend={trendStr}
             trendType={trendType}
             highlight
+            isLoading={loading}
           />
           <StatCardSmall
             label={t("forecast")}
             value={
-              loading
-                ? t("loading")
-                : forecastCents != null
-                  ? formatCurrency(forecastCents)
-                  : "—"
+              forecastCents != null
+                ? formatCurrency(forecastCents)
+                : "—"
             }
             description={t("endOfMonth")}
             trendType="neutral"
+            isLoading={loading}
           />
           <StatCardSmall
             label={t("dailyBurn")}
-            value={loading ? t("loading") : formatCurrency(dailyBurnCents)}
+            value={formatCurrency(dailyBurnCents)}
             description={t("avgDailyBurnDesc")}
             trendType="neutral"
+            isLoading={loading}
           />
           <StatCardSmall
             label={t("status")}
             value={
-              loading ? t("loading") : anomalies > 0 ? t("statusAlert") : t("statusHealthy")
+              anomalies > 0 ? t("statusAlert") : t("statusHealthy")
             }
             description={
               anomalies > 0 ? t("statusAlertDesc") : t("statusHealthyDesc")
             }
             trendType="neutral"
+            isLoading={loading}
+            valueVariant={anomalies > 0 ? "alert" : "healthy"}
           />
         </div>
 
@@ -564,6 +685,28 @@ export default function DashboardPage() {
             </div>
             <div className="flex flex-col w-full relative z-10">
               <div className="flex w-full" style={{ height: 220 }}>
+                {loading ? (
+                  <>
+                    <div
+                      className="flex flex-col justify-between shrink-0 pr-2"
+                      style={{ width: "3.5rem" }}
+                    >
+                      {[0, 1, 2, 3, 4].map((i) => (
+                        <Skeleton key={i} className="h-3 w-10 rounded" />
+                      ))}
+                    </div>
+                    <div className="flex-1 min-w-0 h-full flex items-end gap-0.5 px-1 pb-2">
+                      {Array.from({ length: 14 }).map((_, i) => (
+                        <Skeleton
+                          key={i}
+                          className="flex-1 min-w-[4px] rounded-t"
+                          style={{ height: `${30 + (i % 5) * 18}%` }}
+                        />
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <>
                 <div
                   className="flex flex-col justify-between shrink-0 pr-2 text-[10px] font-mono text-slate-400 dark:text-zinc-500 tabular-nums"
                   style={{ width: "3.5rem" }}
@@ -681,30 +824,39 @@ export default function DashboardPage() {
                     </div>
                   )}
                 </div>
+                  </>
+                )}
               </div>
               <div className="flex mt-3">
                 <div className="shrink-0" style={{ width: "3.5rem" }} />
                 <div className="flex-1 min-w-0 relative h-5 px-1 pb-0.5">
-                  {evolution.length > 0 &&
-                    (() => {
-                      const n = evolution.length;
-                      const indices =
-                        n <= 8
-                          ? Array.from({ length: n }, (_, i) => i)
-                          : [0, Math.floor(n * 0.25), Math.floor(n * 0.5), Math.floor(n * 0.75), n - 1];
-                      return indices.map((idx) => (
-                        <span
-                          key={evolution[idx].date}
-                          className="absolute text-[10px] text-slate-400 dark:text-zinc-600 font-mono uppercase tracking-tighter whitespace-nowrap"
-                          style={{
-                            left: `${(idx / (n - 1 || 1)) * 100}%`,
-                            transform: "translateX(-50%)",
-                          }}
-                        >
-                          {evolution[idx].label}
-                        </span>
-                      ));
-                    })()}
+                  {loading ? (
+                    <div className="flex gap-2 justify-between px-1">
+                      {[0, 1, 2, 3, 4].map((i) => (
+                        <Skeleton key={i} className="h-3 w-12 rounded" />
+                      ))}
+                    </div>
+                  ) : evolution.length > 0
+                    ? (() => {
+                        const n = evolution.length;
+                        const indices =
+                          n <= 8
+                            ? Array.from({ length: n }, (_, i) => i)
+                            : [0, Math.floor(n * 0.25), Math.floor(n * 0.5), Math.floor(n * 0.75), n - 1];
+                        return indices.map((idx) => (
+                          <span
+                            key={evolution[idx].date}
+                            className="absolute text-[10px] text-slate-400 dark:text-zinc-600 font-mono uppercase tracking-tighter whitespace-nowrap"
+                            style={{
+                              left: `${(idx / (n - 1 || 1)) * 100}%`,
+                              transform: "translateX(-50%)",
+                            }}
+                          >
+                            {evolution[idx].label}
+                          </span>
+                        ));
+                      })()
+                    : null}
                 </div>
               </div>
             </div>
@@ -728,19 +880,38 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div className="max-h-64 overflow-y-auto scrollbar-hover-visible pr-3">
-                {providerWithMeta
-                  .filter(
-                    (p) =>
-                      providerFilter === "ALL" ||
-                      p.id.toUpperCase() === providerFilter
-                  )
-                  .map((provider) => (
-                    <ProviderDrillDown key={provider.id} provider={provider} />
-                  ))}
-                {providerWithMeta.length === 0 && !loading && (
-                  <p className="p-6 text-[10px] text-slate-400 dark:text-zinc-600">
-                    {t("noDataInRange")}
-                  </p>
+                {loading ? (
+                  <div className="divide-y divide-slate-100 dark:divide-zinc-900/50">
+                    {[0, 1, 2].map((i) => (
+                      <div key={i} className="flex items-center justify-between p-4 gap-3">
+                        <div className="flex items-center gap-3">
+                          <Skeleton className="h-9 w-9 rounded-lg shrink-0" />
+                          <div className="flex items-center gap-2">
+                            <Skeleton className="h-4 w-16 rounded" />
+                            <Skeleton className="h-3 w-12 rounded" />
+                          </div>
+                        </div>
+                        <Skeleton className="h-4 w-20 rounded" />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <>
+                    {providerWithMeta
+                      .filter(
+                        (p) =>
+                          providerFilter === "ALL" ||
+                          p.id.toUpperCase() === providerFilter
+                      )
+                      .map((provider) => (
+                        <ProviderDrillDown key={provider.id} provider={provider} />
+                      ))}
+                    {providerWithMeta.length === 0 && (
+                      <p className="p-6 text-[10px] text-slate-400 dark:text-zinc-600">
+                        {t("noDataInRange")}
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -761,9 +932,20 @@ export default function DashboardPage() {
                 </div>
               </div>
               {loading ? (
-                <p className="text-[10px] text-slate-400 dark:text-zinc-600">
-                  {t("loading")}
-                </p>
+                <div className="max-h-64 overflow-y-auto pr-3 space-y-6">
+                  {[0, 1, 2, 3, 4].map((i) => (
+                    <div key={i} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Skeleton className="h-5 w-5 rounded" />
+                          <Skeleton className="h-3 w-24 rounded" />
+                        </div>
+                        <Skeleton className="h-3 w-16 rounded" />
+                      </div>
+                      <Skeleton className="h-1.5 w-full rounded-full" />
+                    </div>
+                  ))}
+                </div>
               ) : categories.length === 0 ? (
                 <p className="text-[10px] text-slate-400 dark:text-zinc-600">
                   {t("noDataInRange")}
@@ -786,43 +968,116 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Banner de Operação Estável (Gemini: verde, sem botão) */}
+        {/* Banner de Operação Estável / Alertas de Anomalia (estilo Detalhamento de Recursos) */}
         <div
-          className={`bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-zinc-800 rounded-2xl p-6 flex flex-col md:flex-row items-center gap-6 transition-colors group ${
-            anomalies > 0
-              ? "border-orange-200 dark:border-orange-800/50 bg-orange-50/50 dark:bg-orange-950/10"
+          className={`bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-zinc-800 rounded-2xl overflow-hidden transition-colors group ${
+            !loading && anomalies > 0
+              ? "border-orange-200 dark:border-orange-800/50 bg-orange-50/30 dark:bg-orange-950/10"
               : ""
           }`}
         >
-          <div
-            className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 border group-hover:scale-110 transition-transform ${
-              anomalies > 0
-                ? "bg-orange-500/10 text-orange-500 border-orange-500/20"
-                : "bg-green-500/10 text-green-500 border-green-500/20"
-            }`}
-          >
-            {anomalies > 0 ? (
-              <AlertTriangle size={24} />
+          <div className="p-6 flex flex-col md:flex-row items-center gap-6 border-b border-slate-100 dark:border-zinc-800/50">
+            {loading ? (
+              <>
+                <Skeleton className="w-12 h-12 rounded-full shrink-0" />
+                <div className="flex-1 space-y-2 w-full">
+                  <Skeleton className="h-4 w-56 max-w-full rounded" />
+                  <Skeleton className="h-3 w-full max-w-sm rounded" />
+                </div>
+              </>
             ) : (
-              <ShieldCheck size={24} />
-            )}
-          </div>
-          <div className="flex-1 text-center md:text-left">
-            <h4
-              className={`text-sm font-bold uppercase tracking-widest ${
+              <>
+            <div
+              className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 border group-hover:scale-110 transition-transform ${
                 anomalies > 0
-                  ? "text-orange-600 dark:text-orange-500"
-                  : "text-green-600 dark:text-green-500"
+                  ? "bg-orange-500/10 text-orange-500 border-orange-500/20"
+                  : "bg-green-500/10 text-green-500 border-green-500/20"
               }`}
             >
-              {anomalies > 0 ? t("anomalyAlertTitle") : t("operationalStable")}
-            </h4>
-            <p className="text-xs text-slate-500 dark:text-zinc-500 mt-1 leading-relaxed">
-              {anomalies > 0
-                ? t("anomalyAlertMessage")
-                : t("operationalStableDesc")}
-            </p>
+              {anomalies > 0 ? (
+                <AlertTriangle size={24} />
+              ) : (
+                <ShieldCheck size={24} />
+              )}
+            </div>
+            <div className="flex-1 text-center md:text-left">
+              <h4
+                className={`text-sm font-bold uppercase tracking-widest ${
+                  anomalies > 0
+                    ? "text-orange-600 dark:text-orange-500"
+                    : "text-green-600 dark:text-green-500"
+                }`}
+              >
+                {anomalies > 0 ? t("anomalyAlertTitle") : t("operationalStable")}
+              </h4>
+              <p className="text-xs text-slate-500 dark:text-zinc-500 mt-1 leading-relaxed">
+                {anomalies > 0 && anomalyDetails.length > 0
+                  ? (() => {
+                      try {
+                        const msg = t("anomalyAlertSubtitle");
+                        return typeof msg === "string" && msg.startsWith("Dashboard.") ? "Click a provider to see services with a spike." : msg;
+                      } catch {
+                        return "Click a provider to see services with a spike.";
+                      }
+                    })()
+                  : anomalies > 0
+                    ? t("anomalyAlertMessage")
+                    : t("operationalStableDesc")}
+              </p>
+            </div>
+              </>
+            )}
           </div>
+          {!loading && anomalies > 0 && anomalyDetails.length > 0 && (() => {
+            const providerMeta: Record<string, { name: string; icon: React.ReactNode; colorClass: string; iconBgClass: string }> = {
+              aws: { name: "AWS", icon: <Cloud size={14} />, colorClass: "text-orange-500", iconBgClass: "bg-orange-500/10 border border-orange-500/20" },
+              gcp: { name: "GCP", icon: <Globe size={14} />, colorClass: "text-green-500", iconBgClass: "bg-green-500/10 border border-green-500/20" },
+              vercel: { name: "Vercel", icon: <Zap size={14} />, colorClass: "text-blue-500", iconBgClass: "bg-blue-500/10 border border-blue-500/20" },
+            };
+            const orderIds = ["aws", "gcp", "vercel"];
+            const byProvider = new Map<string, AnomalyDetailItem[]>();
+            for (const a of anomalyDetails) {
+              const key = a.provider.toLowerCase();
+              if (!byProvider.has(key)) byProvider.set(key, []);
+              byProvider.get(key)!.push(a);
+            }
+            const sortedKeys = orderIds.filter((id) => byProvider.has(id));
+            const otherKeys = [...byProvider.keys()].filter((k) => !orderIds.includes(k));
+            const allKeys = [...sortedKeys, ...otherKeys];
+            return (
+              <div className="max-h-64 overflow-y-auto scrollbar-hover-visible">
+                {allKeys.map((key) => {
+                  const meta = providerMeta[key] ?? {
+                    name: key.charAt(0).toUpperCase() + key.slice(1),
+                    icon: <Layers size={14} />,
+                    colorClass: "text-zinc-500",
+                    iconBgClass: "bg-zinc-500/10 border border-zinc-500/20",
+                  };
+                  const services = byProvider.get(key)!;
+                  let serviceCountLabel: string;
+                  try {
+                    serviceCountLabel = services.length === 1 ? t("anomalyOneService") : t("anomalyManyServices", { count: services.length });
+                    if (typeof serviceCountLabel === "string" && serviceCountLabel.startsWith("Dashboard.")) {
+                      serviceCountLabel = services.length === 1 ? "1 service" : `${services.length} services`;
+                    }
+                  } catch {
+                    serviceCountLabel = services.length === 1 ? "1 service" : `${services.length} services`;
+                  }
+                  return (
+                    <AnomalyProviderDrillDown
+                      key={key}
+                      providerName={meta.name}
+                      services={services}
+                      icon={meta.icon}
+                      colorClass={meta.colorClass}
+                      iconBgClass={meta.iconBgClass}
+                      serviceCountLabel={serviceCountLabel}
+                    />
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
 
       </div>

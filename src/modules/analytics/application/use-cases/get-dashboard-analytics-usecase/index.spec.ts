@@ -51,6 +51,7 @@ describe("GetDashboardAnalyticsUseCase", () => {
     expect(result.forecastCents).toBe(0);
     expect(result.dailyBurnCents).toBe(0);
     expect(result.anomalies).toBe(0);
+    expect(result.anomalyDetails).toEqual([]);
     expect(result.evolution.length).toBe(5); // 01–05 Feb
     expect(result.evolution.every((e) => e.total === 0)).toBe(true);
     expect(result.providerBreakdown).toEqual([]);

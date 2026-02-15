@@ -11,6 +11,11 @@ import {
   SyncErrorWithKey,
   SYNC_ERROR_VERCEL_FORBIDDEN,
 } from "../../domain/cloudProvider";
+import {
+  getAnomalySpikeMultiplier,
+  isAnomalySimulationEnabled,
+  isTodayDate,
+} from "./util/anomalySimulation";
 import { randomAroundMean } from "./util/randomAroundMean";
 
 const VERCEL_BILLING_URL = "https://api.vercel.com/v1/billing/charges";
@@ -25,10 +30,15 @@ function toPeriodISO(dateStr: string): string {
  * Returns fake JSONL string matching Vercel Billing API response shape.
  * For local/testing only. BilledCost (and EffectiveCost) are random around a mean with small variance.
  * Accepts from/to (YYYY-MM-DD); ChargePeriodStart/End are always YYYY-MM-DDT00:00:00.000Z.
+ * When ANOMALY_VERCEL_ACTIVE=true, "today" costs are inflated to simulate a spike for anomaly testing.
  */
 export function fakeVercelBilledResponse(from: string, to: string): string {
   const periodStart = toPeriodISO(from);
   const periodEnd = toPeriodISO(to);
+  const mult =
+    isAnomalySimulationEnabled("VERCEL") && isTodayDate(from)
+      ? getAnomalySpikeMultiplier()
+      : 1;
 
   const means = [
     { mean: 10.5, service: "Serverless Functions", consumed: 1250, unit: "invocations", tags: { projectId: "prj_abc123" } },
@@ -44,8 +54,8 @@ export function fakeVercelBilledResponse(from: string, to: string): string {
   ];
 
   const lines = means.map(({ mean, service, consumed, unit, tags }) => {
-    const billed = randomAroundMean(mean, 0.15);
-    const effective = randomAroundMean(mean, 0.12);
+    const billed = randomAroundMean(mean, 0.15) * mult;
+    const effective = randomAroundMean(mean, 0.12) * mult;
     return {
       BilledCost: billed,
       BillingCurrency: "USD",

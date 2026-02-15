@@ -13,6 +13,7 @@ import {
 import { SyncAccountUseCase } from "@/modules/adapter-engine/application/use-cases/sync-account-usecase";
 import { SyncNotFoundError } from "@/modules/adapter-engine/domain/sync";
 import { GetProfileByUserIdUseCase } from "@/modules/organizations/application/use-cases/get-profile-by-user-id-usecase";
+import { TriggerAnomalyAlertAfterSyncUseCase } from "@/modules/notifications/application/use-cases/trigger-anomaly-alert-after-sync-usecase";
 
 /**
  * PATCH: Update cloud account label only.
@@ -109,6 +110,11 @@ export async function POST(
       organizationId: profile.organizationId,
       accountId,
     });
+    if (result.status === "SYNCED") {
+      new TriggerAnomalyAlertAfterSyncUseCase(prisma)
+        .execute({ organizationId: profile.organizationId })
+        .catch(() => {});
+    }
     return NextResponse.json(result);
   } catch (err) {
     if (err instanceof SyncNotFoundError) {

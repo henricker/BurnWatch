@@ -30,12 +30,23 @@ export interface CategoryItem {
   cents: number;
 }
 
+/** Single anomaly for dashboard display (per provider + service). */
+export interface AnomalyDetail {
+  provider: string;
+  serviceName: string;
+  currentSpend: number;
+  averageSpend: number;
+  spikePercent: number;
+  zScore: number;
+}
+
 export interface DashboardAnalyticsResult {
   totalCents: number;
   trendPercent: number | null;
   forecastCents: number | null;
   dailyBurnCents: number;
   anomalies: number;
+  anomalyDetails: AnomalyDetail[];
   evolution: EvolutionDay[];
   providerBreakdown: ProviderBreakdownItem[];
   categories: CategoryItem[];

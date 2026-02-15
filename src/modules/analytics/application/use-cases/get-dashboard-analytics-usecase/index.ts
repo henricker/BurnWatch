@@ -1,6 +1,7 @@
 import type { CloudProvider, PrismaClient } from "@prisma/client";
 
 import type {
+  AnomalyDetail,
   CategoryItem,
   DashboardAnalyticsInput,
   DashboardAnalyticsResult,
@@ -64,6 +65,36 @@ function isAnomalyDay(dayCents: number, last7DailyTotals: number[]): boolean {
   if (std === 0) return false;
   return dayCents > mean + 2 * std;
 }
+
+type ServiceStats = { history: number[]; today: number };
+
+/** Same criteria as TriggerAnomalyAlertAfterSyncUseCase: Z-Score > 2, > $1, spike > 20%. */
+function checkServiceAnomaly(stats: ServiceStats): { averageSpend: number; spikePercent: number; zScore: number } | null {
+  const { history, today } = stats;
+  if (history.length < 3) return null;
+  const sum = history.reduce((a, b) => a + b, 0);
+  const mean = sum / history.length;
+  const variance = history.reduce((acc, val) => acc + (val - mean) ** 2, 0) / history.length;
+  const stdDev = Math.sqrt(variance);
+  const isAnomaly =
+    stdDev > 0 &&
+    today > mean + 2 * stdDev &&
+    today > 100 &&
+    today > mean * 1.2;
+  if (!isAnomaly) return null;
+  return {
+    averageSpend: Math.round(mean),
+    spikePercent: Math.round(((today - mean) / mean) * 100),
+    zScore: (today - mean) / stdDev,
+  };
+}
+
+const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
+  VERCEL: "Vercel",
+  AWS: "AWS",
+  GCP: "GCP",
+  OTHER: "Other",
+};
 
 /**
  * Returns dashboard analytics for an organization (totals, trend, evolution, breakdown, categories).
@@ -146,6 +177,36 @@ export class GetDashboardAnalyticsUseCase {
     let anomalies = 0;
     if (isAnomalyDay(todayTotal, last7DailyTotals)) anomalies += 1;
     if (isAnomalyDay(yesterdayTotal, last7DailyTotals)) anomalies += 1;
+
+    const anomalyDetails: AnomalyDetail[] = [];
+    const serviceByDate = new Map<string, Map<string, number>>();
+    for (const r of rows) {
+      const key = startOfDayUTC(r.date).toISOString().slice(0, 10);
+      const serviceKey = `${r.provider}\0${r.serviceName}`;
+      if (!serviceByDate.has(serviceKey)) serviceByDate.set(serviceKey, new Map());
+      const byDate = serviceByDate.get(serviceKey)!;
+      byDate.set(key, (byDate.get(key) ?? 0) + (r.amountCents ?? 0));
+    }
+    for (const [serviceKey, byDate] of serviceByDate) {
+      const todaySum = byDate.get(todayKey) ?? 0;
+      const history: number[] = [];
+      for (const [dateStr, cents] of byDate) {
+        if (dateStr !== todayKey) history.push(cents);
+      }
+      const anomaly = checkServiceAnomaly({ history, today: todaySum });
+      if (anomaly) {
+        const [provider, serviceName] = serviceKey.split("\0");
+        anomalyDetails.push({
+          provider: PROVIDER_DISPLAY_NAMES[provider] ?? provider,
+          serviceName,
+          currentSpend: todaySum,
+          averageSpend: anomaly.averageSpend,
+          spikePercent: anomaly.spikePercent,
+          zScore: anomaly.zScore,
+        });
+      }
+    }
+    anomalyDetails.sort((a, b) => b.currentSpend - a.currentSpend);
 
     const evolutionByDate = new Map<
       string,
@@ -246,7 +307,8 @@ export class GetDashboardAnalyticsUseCase {
       trendPercent,
       forecastCents,
       dailyBurnCents: Math.round(dailyBurnCents),
-      anomalies,
+      anomalies: anomalyDetails.length > 0 ? anomalyDetails.length : anomalies,
+      anomalyDetails,
       evolution,
       providerBreakdown,
       categories,

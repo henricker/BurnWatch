@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 import type { Role } from "@prisma/client";
 import {
+  Bell,
   CloudCog,
   LayoutDashboard,
   Users,
@@ -116,6 +117,7 @@ export function AppSidebar({
     { href: "/dashboard", labelKey: "dashboard" as const, icon: LayoutDashboard },
     { href: "/dashboard/connections", labelKey: "connections" as const, icon: CloudCog },
     { href: "/dashboard/members", labelKey: "members" as const, icon: Users },
+    { href: "/dashboard/notifications", labelKey: "notifications" as const, icon: Bell },
     { href: "/dashboard/settings", labelKey: "settings" as const, icon: Settings },
   ] as const;
 
