@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useTranslations } from "next-intl";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import {
+  AlertCircle,
   Bell,
   Hash,
   MessageSquare,
@@ -19,6 +20,7 @@ import {
 } from "lucide-react";
 
 import { fetchWithRetry } from "@/lib/safe-fetch";
+import { getNotificationMessages } from "@/modules/notifications/domain/notificationMessages";
 import {
   Dialog,
   DialogContent,
@@ -43,29 +45,22 @@ type ApiSettings = {
   notificationSettings: NotificationSettingsState;
 };
 
-const PREVIEW_CONTENT: Record<
-  NonNullable<PreviewType>,
-  {
-    title: string;
-    slackTitle: string;
-    slackDesc: string;
-    slackCents: string;
-    slackAvg: string;
-    discordTitle: string;
-    discordDesc: string;
-    discordColor: string;
-  }
-> = {
-  anomaly: {
-    title: "Alerta de Anomalia",
-    slackTitle: "⚠️ Spike detetado na AWS!",
-    slackDesc: "O serviço CloudFront teve um aumento de 450% nas últimas 24h.",
-    slackCents: "$125.40",
-    slackAvg: "$22.10",
-    discordTitle: "🚨 ANOMALIA DE CUSTO",
-    discordDesc: "Detetado spike crítico no provedor **AWS**.",
-    discordColor: "bg-red-500",
-  },
+type PreviewContent = {
+  title: string;
+  slackTitle: string;
+  slackDesc: string;
+  slackCents: string;
+  slackAvg: string;
+  discordTitle: string;
+  discordDesc: string;
+  discordColor: string;
+};
+
+const PREVIEW_SAMPLE_ORG = "Acme";
+const PREVIEW_SAMPLE_IMPACT = "$125.40";
+const PREVIEW_SAMPLE_AVG = "$22.10";
+
+const PREVIEW_CONTENT: Record<"burn" | "limit", PreviewContent> = {
   burn: {
     title: "Resumo Diário",
     slackTitle: "📈 Burn Rate Diário",
@@ -88,24 +83,49 @@ const PREVIEW_CONTENT: Record<
   },
 };
 
+function buildAnomalyPreviewContent(locale: string): PreviewContent & { title: string } {
+  const msg = getNotificationMessages(locale);
+  const slackDesc = msg.slack.anomalyDescriptionConsolidated
+    .replace(/{organizationName}/g, PREVIEW_SAMPLE_ORG)
+    .replace(/{totalImpact}/g, PREVIEW_SAMPLE_IMPACT);
+  const discordDesc = msg.discord.anomalyDescriptionConsolidated
+    .replace(/{organizationName}/g, PREVIEW_SAMPLE_ORG)
+    .replace(/{totalImpact}/g, PREVIEW_SAMPLE_IMPACT);
+  return {
+    title: "Alerta de Anomalia",
+    slackTitle: msg.slack.anomalyTitle,
+    slackDesc,
+    slackCents: PREVIEW_SAMPLE_IMPACT,
+    slackAvg: PREVIEW_SAMPLE_AVG,
+    discordTitle: msg.discord.anomalyTitle,
+    discordDesc,
+    discordColor: "bg-red-500",
+  };
+}
+
 function PayloadPreviewModal({
   type,
   isOpen,
   onClose,
   t,
+  anomalyContent,
 }: {
   type: PreviewType;
   isOpen: boolean;
   onClose: () => void;
   t: (key: string) => string;
+  anomalyContent?: PreviewContent & { title: string };
 }) {
   if (!isOpen || !type) return null;
-  const content = PREVIEW_CONTENT[type];
+  const content =
+    type === "anomaly" && anomalyContent
+      ? anomalyContent
+      : (PREVIEW_CONTENT[type as "burn" | "limit"] as PreviewContent & { title: string });
   const title = content.title;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col border-slate-200 dark:border-zinc-800">
+      <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] overflow-hidden flex flex-col border-slate-200 dark:border-zinc-800">
         <DialogHeader className="shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -121,90 +141,90 @@ function PayloadPreviewModal({
             </div>
           </div>
         </DialogHeader>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 overflow-y-auto py-4">
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 px-2">
-              <Hash size={14} className="text-[#36C5F0]" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-zinc-500">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 overflow-y-auto py-4 flex-1 min-h-0 justify-items-center md:justify-items-stretch">
+          <div className="space-y-2 w-full max-w-[320px] md:max-w-none">
+            <div className="flex items-center gap-2 px-1">
+              <Hash size={12} className="text-[#36C5F0]" />
+              <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-zinc-500">
                 {t("previewSlackLabel")}
               </span>
             </div>
-            <div className="bg-[#1A1D21] p-6 rounded-xl border border-white/5 shadow-xl">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded bg-orange-600 flex items-center justify-center shrink-0 shadow-lg shadow-orange-500/20">
-                  <Zap size={16} className="text-white fill-white" />
+            <div className="bg-[#1A1D21] p-3 rounded-lg border border-white/5 shadow-lg min-w-0">
+              <div className="flex items-start gap-2">
+                <div className="w-6 h-6 rounded bg-orange-600 flex items-center justify-center shrink-0 shadow-md shadow-orange-500/20">
+                  <Zap size={12} className="text-white fill-white" />
                 </div>
-                <div className="space-y-1 flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-white font-black text-sm">BurnWatch</span>
-                    <span className="text-[10px] bg-white/10 text-white/50 px-1.5 py-0.5 rounded font-bold uppercase">
+                <div className="space-y-0.5 flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-white font-bold text-xs">BurnWatch</span>
+                    <span className="text-[9px] bg-white/10 text-white/50 px-1 py-0.5 rounded font-bold uppercase">
                       App
                     </span>
-                    <span className="text-[10px] text-white/30 ml-2">{t("previewNow")}</span>
+                    <span className="text-[9px] text-white/30">{t("previewNow")}</span>
                   </div>
-                  <p className="text-[#D1D2D3] text-sm font-bold">{content.slackTitle}</p>
+                  <p className="text-[#D1D2D3] text-xs font-semibold">{content.slackTitle}</p>
                   <div
-                    className={`border-l-4 ${type === "anomaly" ? "border-red-500" : "border-orange-500"} bg-white/5 p-4 rounded-r mt-3`}
+                    className={`border-l-2 ${type === "anomaly" ? "border-red-500" : "border-orange-500"} bg-white/5 p-2.5 rounded-r mt-2`}
                   >
-                    <p className="text-[#D1D2D3] text-xs leading-relaxed">{content.slackDesc}</p>
-                    <div className="flex gap-6 mt-4 pt-3 border-t border-white/5">
+                    <p className="text-[#D1D2D3] text-[11px] leading-snug whitespace-pre-line">{content.slackDesc}</p>
+                    <div className="flex gap-4 mt-2 pt-2 border-t border-white/5">
                       <div>
-                        <p className="text-[9px] text-white/50 uppercase font-bold tracking-wider">
+                        <p className="text-[8px] text-white/50 uppercase font-bold tracking-wider">
                           {t("previewValue")}
                         </p>
-                        <p className="text-white text-xs font-bold font-mono">{content.slackCents}</p>
+                        <p className="text-white text-[11px] font-semibold font-mono">{content.slackCents}</p>
                       </div>
                       <div>
-                        <p className="text-[9px] text-white/50 uppercase font-bold tracking-wider">
+                        <p className="text-[8px] text-white/50 uppercase font-bold tracking-wider">
                           {type === "limit" ? t("previewPercent") : t("previewAverage")}
                         </p>
-                        <p className="text-white text-xs font-bold font-mono">{content.slackAvg}</p>
+                        <p className="text-white text-[11px] font-semibold font-mono">{content.slackAvg}</p>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-              <p className="mt-4 pt-3 border-t border-white/5 text-[10px] text-[#D1D2D3]/30 font-mono uppercase tracking-widest">
+              <p className="mt-2 pt-2 border-t border-white/5 text-[8px] text-[#D1D2D3]/30 font-mono uppercase tracking-wider">
                 Block Kit API v2
               </p>
             </div>
           </div>
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 px-2">
-              <MessageSquare size={14} className="text-[#5865F2]" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-zinc-500">
+          <div className="space-y-2 w-full max-w-[320px] md:max-w-none">
+            <div className="flex items-center gap-2 px-1">
+              <MessageSquare size={12} className="text-[#5865F2]" />
+              <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-zinc-500">
                 {t("previewDiscordLabel")}
               </span>
             </div>
-            <div className="bg-[#313338] p-6 rounded-xl border border-black/20 shadow-xl relative overflow-hidden">
-              <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${content.discordColor}`} />
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center">
-                  <Zap size={10} className="text-white fill-white" />
+            <div className="bg-[#313338] p-3 rounded-lg border border-black/20 shadow-lg relative min-w-0">
+              <div className={`absolute left-0 top-0 bottom-0 w-1 ${content.discordColor}`} />
+              <div className="flex items-center gap-1.5 mb-2">
+                <div className="w-4 h-4 rounded-full bg-orange-500 flex items-center justify-center">
+                  <Zap size={8} className="text-white fill-white" />
                 </div>
-                <span className="text-white font-bold text-[10px] uppercase tracking-tighter opacity-80">
+                <span className="text-white font-semibold text-[9px] uppercase tracking-tighter opacity-80">
                   BurnWatch Intelligence
                 </span>
               </div>
-              <h4 className="text-white font-extrabold text-sm mb-2">{content.discordTitle}</h4>
-              <p className="text-[#B5BAC1] text-xs leading-relaxed mb-6">{content.discordDesc}</p>
-              <div className="grid grid-cols-2 gap-3 mb-6">
-                <div className="bg-black/20 p-2.5 rounded border border-white/5">
-                  <p className="text-[9px] text-white/40 uppercase font-bold mb-1">AWS Node</p>
-                  <p className="text-white text-xs font-mono">$29.10</p>
+              <h4 className="text-white font-bold text-xs mb-1">{content.discordTitle}</h4>
+              <p className="text-[#B5BAC1] text-[11px] leading-snug mb-3 whitespace-pre-line">{content.discordDesc}</p>
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                <div className="bg-black/20 p-2 rounded border border-white/5">
+                  <p className="text-[8px] text-white/40 uppercase font-bold mb-0.5">AWS Node</p>
+                  <p className="text-white text-[11px] font-mono">$29.10</p>
                 </div>
-                <div className="bg-black/20 p-2.5 rounded border border-white/5">
-                  <p className="text-[9px] text-white/40 uppercase font-bold mb-1">Vercel Edge</p>
-                  <p className="text-white text-xs font-mono">$12.40</p>
+                <div className="bg-black/20 p-2 rounded border border-white/5">
+                  <p className="text-[8px] text-white/40 uppercase font-bold mb-0.5">Vercel Edge</p>
+                  <p className="text-white text-[11px] font-mono">$12.40</p>
                 </div>
               </div>
               <Button
                 variant="secondary"
-                className="w-full bg-[#4F545C] hover:bg-[#5D6269] text-white text-[10px] font-bold uppercase tracking-widest h-9"
+                className="w-full bg-[#4F545C] hover:bg-[#5D6269] text-white text-[9px] font-bold uppercase tracking-wider h-7"
                 asChild
               >
                 <a href="/dashboard">
-                  {t("previewOpenDashboard")} <ExternalLink size={10} className="ml-2" />
+                  {t("previewOpenDashboard")} <ExternalLink size={8} className="ml-1" />
                 </a>
               </Button>
             </div>
@@ -246,7 +266,7 @@ function WebhookCard({
   onSave: () => void;
   onTest: () => void;
   isTesting: boolean;
-  testStatus: "idle" | "loading" | "success";
+  testStatus: "idle" | "loading" | "success" | "error";
   saveStatus: "idle" | "saving";
   t: (key: string) => string;
 }) {
@@ -267,7 +287,8 @@ function WebhookCard({
               {title} {t("integration")}
             </h4>
             <p className="text-[9px] text-slate-400 dark:text-zinc-600 font-mono uppercase">
-              {t("statusLabel")}: {testStatus === "success" ? t("statusConnected") : t("statusStandby")}
+              {t("statusLabel")}:{" "}
+              {testStatus === "success" ? t("statusConnected") : testStatus === "error" ? t("statusError") : t("statusStandby")}
             </p>
           </div>
           <span className="text-[8px] font-black uppercase text-green-500/60 bg-green-500/5 px-2 py-0.5 rounded border border-green-500/10 shrink-0">
@@ -303,17 +324,27 @@ function WebhookCard({
               className={`flex-1 h-11 text-[10px] font-bold uppercase tracking-widest ${
                 testStatus === "success"
                   ? "bg-green-500/10 border-green-500/30 text-green-600 dark:text-green-500"
-                  : ""
+                  : testStatus === "error"
+                    ? "bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-400"
+                    : ""
               }`}
             >
               {isTesting && testStatus === "loading" ? (
                 <Loader2 size={12} className="animate-spin mr-2" />
               ) : testStatus === "success" ? (
                 <CheckCircle2 size={12} className="mr-2" />
+              ) : testStatus === "error" ? (
+                <AlertCircle size={12} className="mr-2" />
               ) : (
                 <Send size={12} className="mr-2" />
               )}
-              {testStatus === "loading" ? t("testing") : testStatus === "success" ? t("signalSent") : t("testWebhook")}
+              {testStatus === "loading"
+                ? t("testing")
+                : testStatus === "success"
+                  ? t("signalSent")
+                  : testStatus === "error"
+                    ? t("testErrorLabel")
+                    : t("testWebhook")}
             </Button>
             <Button
               type="button"
@@ -382,6 +413,11 @@ function PreferenceItem({
 
 export function NotificationsView() {
   const t = useTranslations("Notifications");
+  const locale = useLocale();
+  const anomalyPreviewContent = useMemo(
+    () => buildAnomalyPreviewContent(locale),
+    [locale],
+  );
   const [settings, setSettings] = useState<ApiSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [slackUrl, setSlackUrl] = useState("");
@@ -392,7 +428,7 @@ export function NotificationsView() {
     limitWarning: true,
   });
   const [testing, setTesting] = useState<"slack" | "discord" | null>(null);
-  const [testStatus, setTestStatus] = useState<"idle" | "loading" | "success">("idle");
+  const [testStatus, setTestStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving">("idle");
   const [previewType, setPreviewType] = useState<PreviewType>(null);
   const [error, setError] = useState<string | null>(null);
@@ -442,14 +478,18 @@ export function NotificationsView() {
           setTestStatus("idle");
         }, 3000);
       } else {
-        setError(data.error ?? t("testFailed"));
-        setTestStatus("idle");
-        setTesting(null);
+        setTestStatus("error");
+        setTimeout(() => {
+          setTesting(null);
+          setTestStatus("idle");
+        }, 3000);
       }
     } catch {
-      setError(t("testFailed"));
-      setTestStatus("idle");
-      setTesting(null);
+      setTestStatus("error");
+      setTimeout(() => {
+        setTesting(null);
+        setTestStatus("idle");
+      }, 3000);
     }
   };
 
@@ -555,7 +595,10 @@ export function NotificationsView() {
         </div>
 
         {error && (
-          <div className="rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-600 dark:text-red-400">
+          <div
+            className="rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-600 dark:text-red-400"
+            role="alert"
+          >
             {error}
           </div>
         )}
@@ -678,6 +721,7 @@ export function NotificationsView() {
         isOpen={!!previewType}
         onClose={() => setPreviewType(null)}
         t={t}
+        anomalyContent={previewType === "anomaly" ? anomalyPreviewContent : undefined}
       />
     </div>
   );
