@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
+import { Skeleton } from "@/components/ui/skeleton";
 import { fetchWithRetry } from "@/lib/safe-fetch";
 
 /** API response shape (all monetary values in cents). */
@@ -75,6 +76,7 @@ function StatCardSmall({
   trendType,
   description,
   highlight = false,
+  isLoading = false,
 }: {
   label: string;
   value: string;
@@ -82,6 +84,7 @@ function StatCardSmall({
   trendType: "up" | "down" | "neutral";
   description?: string;
   highlight?: boolean;
+  isLoading?: boolean;
 }) {
   const borderClass = highlight
     ? "border-orange-500/30"
@@ -94,7 +97,7 @@ function StatCardSmall({
         <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-zinc-600">
           {label}
         </p>
-        {trend != null && (
+        {!isLoading && trend != null && (
           <div
             className={`text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 ${
               trendType === "up"
@@ -111,13 +114,19 @@ function StatCardSmall({
         )}
       </div>
       <div className="flex items-baseline gap-1.5 relative z-10">
-        <span className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-          {value}
-        </span>
-        {description != null && (
-          <span className="text-[9px] font-mono text-slate-400 dark:text-zinc-600 uppercase italic">
-            {description}
-          </span>
+        {isLoading ? (
+          <Skeleton className="h-8 w-24 rounded" />
+        ) : (
+          <>
+            <span className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+              {value}
+            </span>
+            {description != null && (
+              <span className="text-[9px] font-mono text-slate-400 dark:text-zinc-600 uppercase italic">
+                {description}
+              </span>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -582,38 +591,40 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCardSmall
             label={`${t("totalSpendLabel")} ${t(`dateRange${dateRange}` as "dateRange7D" | "dateRange30D" | "dateRangeMTD")}`}
-            value={loading ? t("loading") : formatCurrency(totalCents)}
-            trend={loading ? undefined : trendStr}
+            value={formatCurrency(totalCents)}
+            trend={trendStr}
             trendType={trendType}
             highlight
+            isLoading={loading}
           />
           <StatCardSmall
             label={t("forecast")}
             value={
-              loading
-                ? t("loading")
-                : forecastCents != null
-                  ? formatCurrency(forecastCents)
-                  : "—"
+              forecastCents != null
+                ? formatCurrency(forecastCents)
+                : "—"
             }
             description={t("endOfMonth")}
             trendType="neutral"
+            isLoading={loading}
           />
           <StatCardSmall
             label={t("dailyBurn")}
-            value={loading ? t("loading") : formatCurrency(dailyBurnCents)}
+            value={formatCurrency(dailyBurnCents)}
             description={t("avgDailyBurnDesc")}
             trendType="neutral"
+            isLoading={loading}
           />
           <StatCardSmall
             label={t("status")}
             value={
-              loading ? t("loading") : anomalies > 0 ? t("statusAlert") : t("statusHealthy")
+              anomalies > 0 ? t("statusAlert") : t("statusHealthy")
             }
             description={
               anomalies > 0 ? t("statusAlertDesc") : t("statusHealthyDesc")
             }
             trendType="neutral"
+            isLoading={loading}
           />
         </div>
 
@@ -653,6 +664,28 @@ export default function DashboardPage() {
             </div>
             <div className="flex flex-col w-full relative z-10">
               <div className="flex w-full" style={{ height: 220 }}>
+                {loading ? (
+                  <>
+                    <div
+                      className="flex flex-col justify-between shrink-0 pr-2"
+                      style={{ width: "3.5rem" }}
+                    >
+                      {[0, 1, 2, 3, 4].map((i) => (
+                        <Skeleton key={i} className="h-3 w-10 rounded" />
+                      ))}
+                    </div>
+                    <div className="flex-1 min-w-0 h-full flex items-end gap-0.5 px-1 pb-2">
+                      {Array.from({ length: 14 }).map((_, i) => (
+                        <Skeleton
+                          key={i}
+                          className="flex-1 min-w-[4px] rounded-t"
+                          style={{ height: `${30 + (i % 5) * 18}%` }}
+                        />
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <>
                 <div
                   className="flex flex-col justify-between shrink-0 pr-2 text-[10px] font-mono text-slate-400 dark:text-zinc-500 tabular-nums"
                   style={{ width: "3.5rem" }}
@@ -770,30 +803,39 @@ export default function DashboardPage() {
                     </div>
                   )}
                 </div>
+                  </>
+                )}
               </div>
               <div className="flex mt-3">
                 <div className="shrink-0" style={{ width: "3.5rem" }} />
                 <div className="flex-1 min-w-0 relative h-5 px-1 pb-0.5">
-                  {evolution.length > 0 &&
-                    (() => {
-                      const n = evolution.length;
-                      const indices =
-                        n <= 8
-                          ? Array.from({ length: n }, (_, i) => i)
-                          : [0, Math.floor(n * 0.25), Math.floor(n * 0.5), Math.floor(n * 0.75), n - 1];
-                      return indices.map((idx) => (
-                        <span
-                          key={evolution[idx].date}
-                          className="absolute text-[10px] text-slate-400 dark:text-zinc-600 font-mono uppercase tracking-tighter whitespace-nowrap"
-                          style={{
-                            left: `${(idx / (n - 1 || 1)) * 100}%`,
-                            transform: "translateX(-50%)",
-                          }}
-                        >
-                          {evolution[idx].label}
-                        </span>
-                      ));
-                    })()}
+                  {loading ? (
+                    <div className="flex gap-2 justify-between px-1">
+                      {[0, 1, 2, 3, 4].map((i) => (
+                        <Skeleton key={i} className="h-3 w-12 rounded" />
+                      ))}
+                    </div>
+                  ) : evolution.length > 0
+                    ? (() => {
+                        const n = evolution.length;
+                        const indices =
+                          n <= 8
+                            ? Array.from({ length: n }, (_, i) => i)
+                            : [0, Math.floor(n * 0.25), Math.floor(n * 0.5), Math.floor(n * 0.75), n - 1];
+                        return indices.map((idx) => (
+                          <span
+                            key={evolution[idx].date}
+                            className="absolute text-[10px] text-slate-400 dark:text-zinc-600 font-mono uppercase tracking-tighter whitespace-nowrap"
+                            style={{
+                              left: `${(idx / (n - 1 || 1)) * 100}%`,
+                              transform: "translateX(-50%)",
+                            }}
+                          >
+                            {evolution[idx].label}
+                          </span>
+                        ));
+                      })()
+                    : null}
                 </div>
               </div>
             </div>
@@ -817,19 +859,38 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div className="max-h-64 overflow-y-auto scrollbar-hover-visible pr-3">
-                {providerWithMeta
-                  .filter(
-                    (p) =>
-                      providerFilter === "ALL" ||
-                      p.id.toUpperCase() === providerFilter
-                  )
-                  .map((provider) => (
-                    <ProviderDrillDown key={provider.id} provider={provider} />
-                  ))}
-                {providerWithMeta.length === 0 && !loading && (
-                  <p className="p-6 text-[10px] text-slate-400 dark:text-zinc-600">
-                    {t("noDataInRange")}
-                  </p>
+                {loading ? (
+                  <div className="divide-y divide-slate-100 dark:divide-zinc-900/50">
+                    {[0, 1, 2].map((i) => (
+                      <div key={i} className="flex items-center justify-between p-4 gap-3">
+                        <div className="flex items-center gap-3">
+                          <Skeleton className="h-9 w-9 rounded-lg shrink-0" />
+                          <div className="flex items-center gap-2">
+                            <Skeleton className="h-4 w-16 rounded" />
+                            <Skeleton className="h-3 w-12 rounded" />
+                          </div>
+                        </div>
+                        <Skeleton className="h-4 w-20 rounded" />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <>
+                    {providerWithMeta
+                      .filter(
+                        (p) =>
+                          providerFilter === "ALL" ||
+                          p.id.toUpperCase() === providerFilter
+                      )
+                      .map((provider) => (
+                        <ProviderDrillDown key={provider.id} provider={provider} />
+                      ))}
+                    {providerWithMeta.length === 0 && (
+                      <p className="p-6 text-[10px] text-slate-400 dark:text-zinc-600">
+                        {t("noDataInRange")}
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -850,9 +911,20 @@ export default function DashboardPage() {
                 </div>
               </div>
               {loading ? (
-                <p className="text-[10px] text-slate-400 dark:text-zinc-600">
-                  {t("loading")}
-                </p>
+                <div className="max-h-64 overflow-y-auto pr-3 space-y-6">
+                  {[0, 1, 2, 3, 4].map((i) => (
+                    <div key={i} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Skeleton className="h-5 w-5 rounded" />
+                          <Skeleton className="h-3 w-24 rounded" />
+                        </div>
+                        <Skeleton className="h-3 w-16 rounded" />
+                      </div>
+                      <Skeleton className="h-1.5 w-full rounded-full" />
+                    </div>
+                  ))}
+                </div>
               ) : categories.length === 0 ? (
                 <p className="text-[10px] text-slate-400 dark:text-zinc-600">
                   {t("noDataInRange")}
@@ -878,12 +950,22 @@ export default function DashboardPage() {
         {/* Banner de Operação Estável / Alertas de Anomalia (estilo Detalhamento de Recursos) */}
         <div
           className={`bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-zinc-800 rounded-2xl overflow-hidden transition-colors group ${
-            anomalies > 0
+            !loading && anomalies > 0
               ? "border-orange-200 dark:border-orange-800/50 bg-orange-50/30 dark:bg-orange-950/10"
               : ""
           }`}
         >
           <div className="p-6 flex flex-col md:flex-row items-center gap-6 border-b border-slate-100 dark:border-zinc-800/50">
+            {loading ? (
+              <>
+                <Skeleton className="w-12 h-12 rounded-full shrink-0" />
+                <div className="flex-1 space-y-2 w-full">
+                  <Skeleton className="h-4 w-56 max-w-full rounded" />
+                  <Skeleton className="h-3 w-full max-w-sm rounded" />
+                </div>
+              </>
+            ) : (
+              <>
             <div
               className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 border group-hover:scale-110 transition-transform ${
                 anomalies > 0
@@ -922,8 +1004,10 @@ export default function DashboardPage() {
                     : t("operationalStableDesc")}
               </p>
             </div>
+              </>
+            )}
           </div>
-          {anomalies > 0 && anomalyDetails.length > 0 && (() => {
+          {!loading && anomalies > 0 && anomalyDetails.length > 0 && (() => {
             const providerMeta: Record<string, { name: string; icon: React.ReactNode; colorClass: string; iconBgClass: string }> = {
               aws: { name: "AWS", icon: <Cloud size={14} />, colorClass: "text-orange-500", iconBgClass: "bg-orange-500/10 border border-orange-500/20" },
               gcp: { name: "GCP", icon: <Globe size={14} />, colorClass: "text-green-500", iconBgClass: "bg-green-500/10 border border-green-500/20" },
