@@ -77,6 +77,7 @@ function StatCardSmall({
   description,
   highlight = false,
   isLoading = false,
+  valueVariant,
 }: {
   label: string;
   value: string;
@@ -85,10 +86,18 @@ function StatCardSmall({
   description?: string;
   highlight?: boolean;
   isLoading?: boolean;
+  /** Status card: "healthy" = emerald, "alert" = red; omit for default (neutral) */
+  valueVariant?: "healthy" | "alert";
 }) {
   const borderClass = highlight
     ? "border-orange-500/30"
     : "border-slate-200 dark:border-zinc-800";
+  const valueColorClass =
+    valueVariant === "healthy"
+      ? "text-emerald-500 dark:text-emerald-400"
+      : valueVariant === "alert"
+        ? "text-red-500 dark:text-red-400"
+        : "text-slate-900 dark:text-white";
   return (
     <div
       className={`bg-white dark:bg-[#0a0a0a] border rounded-2xl p-5 transition-all relative overflow-hidden ${borderClass}`}
@@ -118,7 +127,17 @@ function StatCardSmall({
           <Skeleton className="h-8 w-24 rounded" />
         ) : (
           <>
-            <span className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+            {(valueVariant === "healthy" || valueVariant === "alert") && (
+              <span
+                className={`inline-block w-2 h-2 rounded-full shrink-0 ${
+                  valueVariant === "healthy"
+                    ? "bg-emerald-500 dark:bg-emerald-400"
+                    : "bg-red-500 dark:bg-red-400"
+                }`}
+                aria-hidden
+              />
+            )}
+            <span className={`text-2xl font-bold tracking-tight ${valueColorClass}`}>
               {value}
             </span>
             {description != null && (
@@ -626,6 +645,7 @@ export default function DashboardPage() {
             }
             trendType="neutral"
             isLoading={loading}
+            valueVariant={anomalies > 0 ? "alert" : "healthy"}
           />
         </div>
 
