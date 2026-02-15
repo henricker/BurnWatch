@@ -16,6 +16,11 @@ import {
   SyncErrorWithKey,
   SYNC_ERROR_AWS_INVALID_CREDENTIALS,
 } from "../../domain/cloudProvider";
+import {
+  getAnomalySpikeMultiplier,
+  isAnomalySimulationEnabled,
+  isTodayDate,
+} from "./util/anomalySimulation";
 import { randomAroundMean } from "./util/randomAroundMean";
 
 interface AwsCredentialsPayload {
@@ -49,6 +54,7 @@ function randomAroundMeanAws(mean: number, stdDevRatio: number = 0.12): number {
 /**
  * Fake AWS Cost Explorer data for local/dev usage.
  * Mirrors what `fetchDailySpend` would return after normalização.
+ * When ANOMALY_AWS_ACTIVE=true, "today" amounts are inflated to simulate a spike for anomaly testing.
  */
 export function fakeAwsBilledResponse(range: FetchRange): DailySpendData[] {
   const date = parseAwsDate(range.from);
@@ -56,29 +62,33 @@ export function fakeAwsBilledResponse(range: FetchRange): DailySpendData[] {
   const rds = randomAroundMeanAws(80);
   const s3 = randomAroundMeanAws(32);
   const lambda = randomAroundMeanAws(12);
+  const mult =
+    isAnomalySimulationEnabled("AWS") && isTodayDate(range.from)
+      ? getAnomalySpikeMultiplier()
+      : 1;
   return [
     {
       date,
       serviceName: "Amazon Elastic Compute Cloud",
-      amountCents: Math.round(ec2 * 100),
+      amountCents: Math.round(ec2 * 100 * mult),
       currency: "USD",
     },
     {
       date,
       serviceName: "Amazon Relational Database Service",
-      amountCents: Math.round(rds * 100),
+      amountCents: Math.round(rds * 100 * mult),
       currency: "USD",
     },
     {
       date,
       serviceName: "Amazon Simple Storage Service",
-      amountCents: Math.round(s3 * 100),
+      amountCents: Math.round(s3 * 100 * mult),
       currency: "USD",
     },
     {
       date,
       serviceName: "AWS Lambda",
-      amountCents: Math.round(lambda * 100),
+      amountCents: Math.round(lambda * 100 * mult),
       currency: "USD",
     },
   ];

@@ -376,6 +376,11 @@ Resumo das envs hoje (arquivo `.env` não é commitado, mas o contrato é este):
   - `USE_FAKE_AWS_BILLING="true"` – AwsProvider devolve dados simulados.
   - `USE_FAKE_VERCEL_BILLING="true"` – VercelProvider devolve dados simulados.
   - `USE_FAKE_GCP_BILLING="true"` – GcpProvider devolve dados simulados (Compute Engine, BigQuery, Cloud Run, Cloud Storage).
+- **Simulação de anomalias (opcional; só tem efeito com modo fake ativo)**
+  - `ANOMALY_AWS_ACTIVE="true"` – no fake da AWS, o dia "hoje" recebe custos inflacionados (spike) para testar detecção e notificações.
+  - `ANOMALY_VERCEL_ACTIVE="true"` – idem para o fake da Vercel.
+  - `ANOMALY_GCP_ACTIVE="true"` – idem para o fake da GCP.
+  - `ANOMALY_SPIKE_MULTIPLIER` – multiplicador do spike (default: 5). Ex.: 5 faz o gasto de "hoje" ficar ~5× a média, acionando Z-Score e alertas.
 - **GCP (opcional)**
   - `GCP_BILLING_DATASET_ID` – dataset do BigQuery onde está a exportação de faturação (default: `billing_export`). A tabela esperada é `gcp_billing_export_v1_<<BILLING_ACCOUNT_ID>>`.
 

@@ -13,6 +13,11 @@ import {
   SYNC_ERROR_GCP_BILLING_EXPORT,
   SYNC_ERROR_GCP_INVALID_CREDENTIALS,
 } from "../../domain/cloudProvider";
+import {
+  getAnomalySpikeMultiplier,
+  isAnomalySimulationEnabled,
+  isTodayDate,
+} from "./util/anomalySimulation";
 import { randomAroundMean } from "./util/randomAroundMean";
 
 /** Stored plaintext after decrypt: billingAccountId + full Service Account JSON string. */
@@ -51,6 +56,7 @@ function randomAroundMeanGcp(mean: number, stdDevRatio: number = 0.12): number {
 
 /**
  * Fake GCP billing data for local/dev. Services aligned with serviceNameToCategory (Compute, Database, etc.).
+ * When ANOMALY_GCP_ACTIVE=true, "today" amounts are inflated to simulate a spike for anomaly testing.
  */
 export function fakeGcpBilledResponse(range: FetchRange): DailySpendData[] {
   const date = parseGcpDate(range.from);
@@ -58,29 +64,33 @@ export function fakeGcpBilledResponse(range: FetchRange): DailySpendData[] {
   const bigquery = randomAroundMeanGcp(45);
   const cloudRun = randomAroundMeanGcp(28);
   const cloudStorage = randomAroundMeanGcp(15);
+  const mult =
+    isAnomalySimulationEnabled("GCP") && isTodayDate(range.from)
+      ? getAnomalySpikeMultiplier()
+      : 1;
   return [
     {
       date,
       serviceName: "Compute Engine",
-      amountCents: Math.round(compute * 100),
+      amountCents: Math.round(compute * 100 * mult),
       currency: "USD",
     },
     {
       date,
       serviceName: "BigQuery",
-      amountCents: Math.round(bigquery * 100),
+      amountCents: Math.round(bigquery * 100 * mult),
       currency: "USD",
     },
     {
       date,
       serviceName: "Cloud Run",
-      amountCents: Math.round(cloudRun * 100),
+      amountCents: Math.round(cloudRun * 100 * mult),
       currency: "USD",
     },
     {
       date,
       serviceName: "Cloud Storage",
-      amountCents: Math.round(cloudStorage * 100),
+      amountCents: Math.round(cloudStorage * 100 * mult),
       currency: "USD",
     },
   ];
