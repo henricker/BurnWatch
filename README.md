@@ -62,7 +62,8 @@ Identify "Zombies"—forgotten instances, idle GPUs, and orphaned storage volume
 - **M6 – AWS Integration:** ✅ Concluído. `AwsProvider` com Cost Explorer SDK, modo fake, tratamento de credencial inválida e mensagens traduzidas em Connections; CI com cache pnpm e `prisma generate`; lint sem erros nem warnings; polimento do dashboard (gráfico 30 dias com eixo X/Y e tooltip no hover, gasto por categoria em light mode) e da sidebar (logo alinhado no modo colapsado, modo aberto preservado).
 - **M6.5 – Backend Architecture Improvements:** ✅ Concluído. Use cases em classes (domain / application / infrastructure); uma pasta por use case em kebab-case com `index.ts` e `index.spec.ts` em todos os módulos; rotas API finas; Vitest com `*.spec.ts`; 105 testes e build passando. Necessário para a evolução sustentável da plataforma.
 - **M7 – GCP Integration:** ✅ Concluído. `GcpProvider` com Service Account JSON e BigQuery Billing Export; modo fake (`USE_FAKE_GCP_BILLING`); erros GCP traduzidos em Connections; mapeamento de serviços (BigQuery → Database) e cor #22c55e no dashboard; 116 testes.
-- **M8 – Notification Engine:** ✅ Concluído. Webhooks Slack e Discord por organização (`slackWebhookUrl`, `discordWebhookUrl`, `notificationSettings` em Organization); use cases `SendAnomalyAlertUseCase`, `TestWebhookConnectionUseCase`, `TriggerAnomalyAlertAfterSyncUseCase`; página `/dashboard/notifications` (testar webhook sem gravar, guardar quando valor difere); mensagens em pt/en/es conforme locale do OWNER; trigger pós-sync em fire-and-forget. 137 testes.
+- **M8 – Notification Engine:** ✅ Concluído. Webhooks Slack e Discord por organização (`slackWebhookUrl`, `discordWebhookUrl`, `notificationSettings` em Organization); use cases `SendAnomalyAlertUseCase`, `TestWebhookConnectionUseCase`, `TriggerAnomalyAlertAfterSyncUseCase`; página `/dashboard/notifications` (testar webhook sem gravar, guardar quando valor difere); mensagens em pt/en/es conforme locale do OWNER; trigger pós-sync em fire-and-forget.
+- **Melhorias pós-M08 (Dashboard e simulação):** Lista de anomalias por provedor no dashboard (API `anomalyDetails`, UI expansível por AWS/GCP/Vercel); loading com Skeleton em todos os blocos; cartão Estado Healthy/Alert em verde esmeralda/vermelho com i18n (pt/es/en); troca de idioma sem refetch de analytics; simulação de anomalias via env (`ANOMALY_AWS_ACTIVE`, `ANOMALY_VERCEL_ACTIVE`, `ANOMALY_GCP_ACTIVE`, `ANOMALY_SPIKE_MULTIPLIER`) para testar alertas sem custo real. 147 testes.
 - **M9 – Monetization:** Stripe Checkout (Starter R$ 97 / $49, Pro R$ 197 / $149), Usage Guards (soft block), pricing regional (`bw_market`).
 
 Ver [docs/sprints/SPRINT_01.md](docs/sprints/SPRINT_01.md) (histórico) e [docs/sprints/SPRINT_02.md](docs/sprints/SPRINT_02.md) (plano atual). Contexto técnico e env: [docs/STATE.md](docs/STATE.md).
@@ -80,7 +81,7 @@ pnpm dev
 
 Required env vars and details: **§9** in `docs/STATE.md`.
 
-GitHub Actions CI: `.github/workflows/ci.yml` roda `pnpm lint`, `pnpm test` e `pnpm build` em cada push/PR para `main`, com billing fake para AWS, Vercel e GCP por padrão (`USE_FAKE_*_BILLING=true`).
+GitHub Actions CI: `.github/workflows/ci.yml` roda `pnpm lint`, `pnpm test` e `pnpm build` em cada push/PR para `main`, com billing fake para AWS, Vercel e GCP por padrão (`USE_FAKE_*_BILLING=true`). Opcional: `ANOMALY_*_ACTIVE=true` para simular spikes no fake e testar notificações sem custo (ver §9 em `docs/STATE.md`).
 
 ---
 

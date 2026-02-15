@@ -84,7 +84,23 @@ Necessário para a evolução da plataforma: código mais legível, testes alinh
 - **Use cases:** `SendAnomalyAlertUseCase` (report consolidado MultiCloudAnomalyReport para webhooks configurados quando `notificationSettings.anomaly` é true); `TestWebhookConnectionUseCase` (mensagem de teste, suporta URL no body para testar sem gravar); `TriggerAnomalyAlertAfterSyncUseCase` (classe com `execute({ organizationId })`: busca dailySpend dos últimos 14 dias, agrupa por provider/serviço, regra Z-Score > 2 + valor > $1 + spike > 20%, constrói report e chama SendAnomalyAlert; erros engolidos).
 - **Trigger de Anomalia:** Após sync com sucesso (`POST /api/cloud-accounts/[id]` → status SYNCED), `TriggerAnomalyAlertAfterSyncUseCase` é executado em fire-and-forget.
 - **UI:** Página `/dashboard/notifications` com inputs Slack/Discord; botão "Test" ativo só quando há URL; botão "Save" ativo só quando o valor difere do gravado; teste sem gravar suportado.
-- **Testes:** SlackProvider, DiscordProvider, SendAnomalyAlertUseCase, TestWebhookConnectionUseCase, TriggerAnomalyAlertAfterSyncUseCase com `index.spec.ts`; 137 testes no total.
+- **Testes:** SlackProvider, DiscordProvider, SendAnomalyAlertUseCase, TestWebhookConnectionUseCase, TriggerAnomalyAlertAfterSyncUseCase com `index.spec.ts`; 147 testes no total.
+
+---
+
+## 📊 Melhorias no Dashboard e Simulação de Anomalias (pós-M08)
+
+**Status:** ✅ Concluído.
+
+**Meta:** Melhorar a UX do dashboard (principal produto), permitir testes de anomalias sem custo real e evitar refetch ao trocar idioma.
+
+### Entregues
+
+- **Simulação de anomalias (env):** Variáveis `ANOMALY_AWS_ACTIVE`, `ANOMALY_VERCEL_ACTIVE`, `ANOMALY_GCP_ACTIVE` (e opcional `ANOMALY_SPIKE_MULTIPLIER`, default 5). Com modo fake ativo, o dia "hoje" recebe custos inflacionados para disparar detecção (Z-Score > 2, spike > 20%) e notificações sem gastar na cloud. Helper `util/anomalySimulation.ts`; testes em `anomalySimulation.spec.ts`.
+- **Lista de anomalias no dashboard:** API de analytics devolve `anomalyDetails` (GetDashboardAnalyticsUseCase com detecção por serviço, mesma regra do TriggerAnomalyAlert); UI agrupa por AWS/GCP/Vercel com linhas expansíveis (chevron, clique para ver serviços e +XX%), ao estilo do bloco Detalhamento de Recursos; i18n `anomalyAlertSubtitle`, `anomalyOneService`, `anomalyManyServices` (pt/en/es).
+- **Loading com Skeleton:** Estado de loading em todos os blocos: cards de métricas (skeleton no valor), gráfico de evolução (eixo Y, barras, eixo X), Resource Breakdown (3 linhas skeleton), Gasto por Categoria (5 itens skeleton), banner de status/anomalias. Componente shadcn `Skeleton`; UX consistente na tela principal.
+- **Cartão de Estado (Healthy/Alert):** Healthy em verde esmeralda (#10b981) com ponto; Alert em vermelho com ponto. Traduções: pt (Saudável, Alerta), es (Saludable, Alerta), en (Healthy, Alert). Prop `valueVariant` em StatCardSmall.
+- **Troca de idioma sem refetch:** `fetchAnalytics` depende apenas de `dateRange` e `providerFilter`; erro genérico guardado como chave `"errorLoading"` e traduzido na renderização. Alterar locale atualiza apenas os textos, sem nova requisição a `/api/analytics`.
 
 ---
 
