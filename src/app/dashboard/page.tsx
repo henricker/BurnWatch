@@ -400,12 +400,13 @@ export default function DashboardPage() {
       const json = (await res.json()) as AnalyticsResponse;
       setData(json);
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("errorLoading"));
+      const message = e instanceof Error ? e.message : null;
+      setError(message ?? "errorLoading");
       setData(null);
     } finally {
       setLoading(false);
     }
-  }, [dateRange, providerFilter, t]);
+  }, [dateRange, providerFilter]);
 
   useEffect(() => {
     void fetchAnalytics();
@@ -583,7 +584,7 @@ export default function DashboardPage() {
 
         {error && (
           <div className="rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/20 px-4 py-3 text-sm text-red-600 dark:text-red-400">
-            {error}
+            {error === "errorLoading" ? t("errorLoading") : error}
           </div>
         )}
 
