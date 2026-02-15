@@ -23,12 +23,22 @@ import { useTranslations } from "next-intl";
 import { fetchWithRetry } from "@/lib/safe-fetch";
 
 /** API response shape (all monetary values in cents). */
+interface AnomalyDetailItem {
+  provider: string;
+  serviceName: string;
+  currentSpend: number;
+  averageSpend: number;
+  spikePercent: number;
+  zScore: number;
+}
+
 interface AnalyticsResponse {
   totalCents: number;
   trendPercent: number | null;
   forecastCents: number | null;
   dailyBurnCents: number;
   anomalies: number;
+  anomalyDetails: AnomalyDetailItem[];
   evolution: Array<{
     date: string;
     label: string;
@@ -215,6 +225,84 @@ function ProviderDrillDown({
   );
 }
 
+/** Anomaly row: provider with chevron, expandable list of anomalous services (same pattern as ProviderDrillDown). */
+function AnomalyProviderDrillDown({
+  providerName,
+  services,
+  icon,
+  colorClass,
+  iconBgClass,
+  serviceCountLabel,
+}: {
+  providerName: string;
+  services: AnomalyDetailItem[];
+  icon: React.ReactNode;
+  colorClass: string;
+  iconBgClass: string;
+  serviceCountLabel: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const maxSpike = Math.max(...services.map((s) => s.spikePercent), 0);
+  return (
+    <div
+      className={`border-b border-orange-200/50 dark:border-orange-900/30 last:border-0 transition-all ${
+        isOpen ? "bg-orange-50/20 dark:bg-orange-950/10" : ""
+      }`}
+    >
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between p-4 hover:bg-orange-50/30 dark:hover:bg-orange-950/20 transition-all group"
+      >
+        <div className="flex items-center gap-3">
+          <div
+            className={`p-2 rounded-lg ${iconBgClass} ${colorClass} transition-transform ${isOpen ? "rotate-90" : ""}`}
+          >
+            {isOpen ? (
+              <ChevronDown size={14} />
+            ) : (
+              <ChevronRight size={14} />
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={colorClass}>{icon}</span>
+            <span className="text-xs font-black uppercase tracking-widest text-slate-900 dark:text-zinc-200">
+              {providerName}
+            </span>
+          </div>
+        </div>
+        <div className="flex items-baseline gap-2">
+          <span className="text-xs font-mono font-bold text-orange-600 dark:text-orange-500">
+            +{maxSpike}%
+          </span>
+          <span className="text-[9px] text-slate-400 dark:text-zinc-600">
+            {serviceCountLabel}
+          </span>
+        </div>
+      </button>
+      {isOpen && (
+        <div className="px-12 pb-6 animate-in slide-in-from-top-2 duration-300">
+          <div className="space-y-1">
+            {services.map((a, idx) => (
+              <div
+                key={`${a.serviceName}-${idx}`}
+                className="flex items-center justify-between py-2 group/item"
+              >
+                <span className="text-[10px] font-mono text-slate-400 dark:text-zinc-500 group-hover/item:text-slate-200 dark:group-hover/item:text-zinc-200 transition-colors uppercase tracking-wider">
+                  {a.serviceName}
+                </span>
+                <span className="text-[10px] font-mono font-bold text-orange-600 dark:text-orange-500">
+                  +{a.spikePercent}%
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function CategoryItem({
   label,
   cents,
@@ -316,6 +404,7 @@ export default function DashboardPage() {
 
   const totalCents = data?.totalCents ?? 0;
   const trendPercent = data?.trendPercent ?? null;
+  const anomalyDetails = data?.anomalyDetails ?? [];
   const trendStr =
     trendPercent != null
       ? `${trendPercent >= 0 ? "+" : ""}${trendPercent.toFixed(1)}%`
@@ -786,43 +875,104 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Banner de Operação Estável (Gemini: verde, sem botão) */}
+        {/* Banner de Operação Estável / Alertas de Anomalia (estilo Detalhamento de Recursos) */}
         <div
-          className={`bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-zinc-800 rounded-2xl p-6 flex flex-col md:flex-row items-center gap-6 transition-colors group ${
+          className={`bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-zinc-800 rounded-2xl overflow-hidden transition-colors group ${
             anomalies > 0
-              ? "border-orange-200 dark:border-orange-800/50 bg-orange-50/50 dark:bg-orange-950/10"
+              ? "border-orange-200 dark:border-orange-800/50 bg-orange-50/30 dark:bg-orange-950/10"
               : ""
           }`}
         >
-          <div
-            className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 border group-hover:scale-110 transition-transform ${
-              anomalies > 0
-                ? "bg-orange-500/10 text-orange-500 border-orange-500/20"
-                : "bg-green-500/10 text-green-500 border-green-500/20"
-            }`}
-          >
-            {anomalies > 0 ? (
-              <AlertTriangle size={24} />
-            ) : (
-              <ShieldCheck size={24} />
-            )}
-          </div>
-          <div className="flex-1 text-center md:text-left">
-            <h4
-              className={`text-sm font-bold uppercase tracking-widest ${
+          <div className="p-6 flex flex-col md:flex-row items-center gap-6 border-b border-slate-100 dark:border-zinc-800/50">
+            <div
+              className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 border group-hover:scale-110 transition-transform ${
                 anomalies > 0
-                  ? "text-orange-600 dark:text-orange-500"
-                  : "text-green-600 dark:text-green-500"
+                  ? "bg-orange-500/10 text-orange-500 border-orange-500/20"
+                  : "bg-green-500/10 text-green-500 border-green-500/20"
               }`}
             >
-              {anomalies > 0 ? t("anomalyAlertTitle") : t("operationalStable")}
-            </h4>
-            <p className="text-xs text-slate-500 dark:text-zinc-500 mt-1 leading-relaxed">
-              {anomalies > 0
-                ? t("anomalyAlertMessage")
-                : t("operationalStableDesc")}
-            </p>
+              {anomalies > 0 ? (
+                <AlertTriangle size={24} />
+              ) : (
+                <ShieldCheck size={24} />
+              )}
+            </div>
+            <div className="flex-1 text-center md:text-left">
+              <h4
+                className={`text-sm font-bold uppercase tracking-widest ${
+                  anomalies > 0
+                    ? "text-orange-600 dark:text-orange-500"
+                    : "text-green-600 dark:text-green-500"
+                }`}
+              >
+                {anomalies > 0 ? t("anomalyAlertTitle") : t("operationalStable")}
+              </h4>
+              <p className="text-xs text-slate-500 dark:text-zinc-500 mt-1 leading-relaxed">
+                {anomalies > 0 && anomalyDetails.length > 0
+                  ? (() => {
+                      try {
+                        const msg = t("anomalyAlertSubtitle");
+                        return typeof msg === "string" && msg.startsWith("Dashboard.") ? "Click a provider to see services with a spike." : msg;
+                      } catch {
+                        return "Click a provider to see services with a spike.";
+                      }
+                    })()
+                  : anomalies > 0
+                    ? t("anomalyAlertMessage")
+                    : t("operationalStableDesc")}
+              </p>
+            </div>
           </div>
+          {anomalies > 0 && anomalyDetails.length > 0 && (() => {
+            const providerMeta: Record<string, { name: string; icon: React.ReactNode; colorClass: string; iconBgClass: string }> = {
+              aws: { name: "AWS", icon: <Cloud size={14} />, colorClass: "text-orange-500", iconBgClass: "bg-orange-500/10 border border-orange-500/20" },
+              gcp: { name: "GCP", icon: <Globe size={14} />, colorClass: "text-green-500", iconBgClass: "bg-green-500/10 border border-green-500/20" },
+              vercel: { name: "Vercel", icon: <Zap size={14} />, colorClass: "text-blue-500", iconBgClass: "bg-blue-500/10 border border-blue-500/20" },
+            };
+            const orderIds = ["aws", "gcp", "vercel"];
+            const byProvider = new Map<string, AnomalyDetailItem[]>();
+            for (const a of anomalyDetails) {
+              const key = a.provider.toLowerCase();
+              if (!byProvider.has(key)) byProvider.set(key, []);
+              byProvider.get(key)!.push(a);
+            }
+            const sortedKeys = orderIds.filter((id) => byProvider.has(id));
+            const otherKeys = [...byProvider.keys()].filter((k) => !orderIds.includes(k));
+            const allKeys = [...sortedKeys, ...otherKeys];
+            return (
+              <div className="max-h-64 overflow-y-auto scrollbar-hover-visible">
+                {allKeys.map((key) => {
+                  const meta = providerMeta[key] ?? {
+                    name: key.charAt(0).toUpperCase() + key.slice(1),
+                    icon: <Layers size={14} />,
+                    colorClass: "text-zinc-500",
+                    iconBgClass: "bg-zinc-500/10 border border-zinc-500/20",
+                  };
+                  const services = byProvider.get(key)!;
+                  let serviceCountLabel: string;
+                  try {
+                    serviceCountLabel = services.length === 1 ? t("anomalyOneService") : t("anomalyManyServices", { count: services.length });
+                    if (typeof serviceCountLabel === "string" && serviceCountLabel.startsWith("Dashboard.")) {
+                      serviceCountLabel = services.length === 1 ? "1 service" : `${services.length} services`;
+                    }
+                  } catch {
+                    serviceCountLabel = services.length === 1 ? "1 service" : `${services.length} services`;
+                  }
+                  return (
+                    <AnomalyProviderDrillDown
+                      key={key}
+                      providerName={meta.name}
+                      services={services}
+                      icon={meta.icon}
+                      colorClass={meta.colorClass}
+                      iconBgClass={meta.iconBgClass}
+                      serviceCountLabel={serviceCountLabel}
+                    />
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
 
       </div>
