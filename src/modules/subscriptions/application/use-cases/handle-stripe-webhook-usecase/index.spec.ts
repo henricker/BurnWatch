@@ -89,7 +89,7 @@ describe("HandleStripeWebhookUseCase", () => {
     expect(prisma.subscription.upsert).not.toHaveBeenCalled();
   });
 
-  it("upserts subscription and links org on checkout.session.completed", async () => {
+  it("upserts subscription and links only owned orgs on checkout.session.completed", async () => {
     const upsert = vi.fn().mockResolvedValue({
       id: "sub-db-1",
       userId: "user-1",
@@ -140,7 +140,7 @@ describe("HandleStripeWebhookUseCase", () => {
       }),
     );
     expect(updateMany).toHaveBeenCalledWith({
-      where: { profiles: { some: { userId: "user-1" } } },
+      where: { profiles: { some: { userId: "user-1", role: "OWNER" } } },
       data: { subscriptionId: "sub-db-1" },
     });
   });

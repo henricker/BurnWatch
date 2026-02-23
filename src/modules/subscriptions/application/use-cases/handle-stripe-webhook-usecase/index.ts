@@ -123,7 +123,7 @@ export class HandleStripeWebhookUseCase {
     });
 
     await this.prisma.organization.updateMany({
-      where: { profiles: { some: { userId } } },
+      where: { profiles: { some: { userId, role: "OWNER" } } },
       data: { subscriptionId: sub.id },
     });
 
