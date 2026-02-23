@@ -457,6 +457,9 @@ export function LandingContent() {
                   </span>
                   <span className="text-sm text-zinc-500 dark:text-zinc-600">{t("perMonth")}</span>
                 </div>
+                <p className="mt-2 text-[10px] font-semibold uppercase tracking-widest text-[#f97316]">
+                  {t("pricingTrialStarter")}
+                </p>
               </div>
               <ul className="mb-12 flex-1 space-y-5 text-left text-[10px] font-medium uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
                 <li className="flex items-center gap-3">
@@ -494,6 +497,9 @@ export function LandingContent() {
                   </span>
                   <span className="text-sm text-zinc-500 dark:text-zinc-600">{t("perMonth")}</span>
                 </div>
+                <p className="mt-2 text-[10px] font-semibold uppercase tracking-widest text-[#f97316]">
+                  {t("pricingTrialPro")}
+                </p>
               </div>
               <ul className="mb-12 flex-1 space-y-5 text-left text-[10px] font-medium uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
                 <li className="flex items-center gap-3">

@@ -50,11 +50,18 @@ export async function GET(request: Request) {
     );
   }
 
+  const orgWithSubscription = await prisma.organization.findUnique({
+    where: { id: profile.organizationId },
+    select: { subscription: { select: { plan: true } } },
+  });
+  const plan = orgWithSubscription?.subscription?.plan ?? "STARTER";
+
   const useCase = new GetDashboardAnalyticsUseCase(prisma);
   const result = await useCase.execute({
     organizationId: profile.organizationId,
     dateRange,
     providerFilter,
+    plan,
   });
 
   return NextResponse.json(result);

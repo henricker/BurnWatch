@@ -16,6 +16,13 @@ export class SyncNotFoundError extends SyncError {
   }
 }
 
+export class SyncRateLimitError extends SyncError {
+  constructor(message: string = "Manual sync is limited on your plan. Try again later or upgrade to Pro.") {
+    super(message);
+    this.name = "SyncRateLimitError";
+  }
+}
+
 export interface SyncAccountParams {
   organizationId: string;
   accountId: string;

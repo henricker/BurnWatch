@@ -14,6 +14,27 @@ enum Role {
   MEMBER
 }
 
+enum PlanType {
+  STARTER
+  PRO
+}
+
+model Subscription {
+  id                   String    @id @default(uuid()) @db.Uuid
+  userId               String    @unique @map("user_id")
+  stripeCustomerId     String    @unique @map("stripe_customer_id")
+  stripeSubscriptionId String?   @unique @map("stripe_subscription_id")
+  status               String    @map("status")
+  plan                 PlanType  @default(STARTER) @map("plan")
+  currentPeriodEnd     DateTime? @map("current_period_end")
+  /// When set, subscription is scheduled to end at this time (cancel_at or period end if cancel_at_period_end).
+  cancelAt             DateTime? @map("cancel_at")
+
+  organizations Organization[]
+
+  @@map("subscriptions")
+}
+
 model Organization {
   id        String   @id @default(uuid()) @db.Uuid
   name      String
@@ -23,6 +44,9 @@ model Organization {
   discordWebhookUrl String? @map("discord_webhook_url")
   /// JSON flags: { "anomaly": true, "dailySummary": false }
   notificationSettings Json? @map("notification_settings")
+
+  subscriptionId String?  @db.Uuid @map("subscription_id")
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id])
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

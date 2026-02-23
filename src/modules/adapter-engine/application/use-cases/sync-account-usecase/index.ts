@@ -6,7 +6,7 @@ import type { EncryptionService } from "@/lib/security/encryption";
 import type { ICloudProvider } from "../../../domain/cloudProvider";
 import { SyncErrorWithKey } from "../../../domain/cloudProvider";
 import type { SyncAccountParams, SyncAccountResult } from "../../../domain/sync";
-import { SyncNotFoundError } from "../../../domain/sync";
+import { SyncNotFoundError, SyncRateLimitError } from "../../../domain/sync";
 import { MockProvider } from "../../../infrastructure/providers/mockProvider";
 import { AwsProvider } from "../../../infrastructure/providers/awsProvider";
 import { VercelProvider } from "../../../infrastructure/providers/vercelProvider";
@@ -69,10 +69,39 @@ export class SyncAccountUseCase {
 
     const account = await this.prisma.cloudAccount.findFirst({
       where: { id: accountId, organizationId },
+      include: {
+        organization: { include: { subscription: true } },
+      },
     });
 
     if (!account) {
       throw new SyncNotFoundError();
+    }
+
+    const plan = account.organization?.subscription?.plan ?? "STARTER";
+    const now = new Date();
+
+    if (plan === "STARTER") {
+      const latestSyncInOrgForProvider = await this.prisma.cloudAccount.findFirst({
+        where: { organizationId, provider: account.provider },
+        orderBy: { lastSyncedAt: "desc" },
+        select: { lastSyncedAt: true },
+      });
+      const lastSync = latestSyncInOrgForProvider?.lastSyncedAt;
+      if (lastSync) {
+        const msSince = now.getTime() - lastSync.getTime();
+        if (msSince < 24 * 60 * 60 * 1000) {
+          throw new SyncRateLimitError();
+        }
+      }
+    } else {
+      const lastSync = account.lastSyncedAt;
+      if (lastSync) {
+        const msSince = now.getTime() - lastSync.getTime();
+        if (msSince < 5 * 60 * 1000) {
+          throw new SyncRateLimitError();
+        }
+      }
     }
 
     await this.prisma.cloudAccount.update({
@@ -85,7 +114,6 @@ export class SyncAccountUseCase {
 
     try {
       const provider = getProvider(account.provider, this.encryption);
-      const now = new Date();
       const todayStart = startOfDayUTC(now);
       let cursor = getSyncCursorStart(account.lastSyncedAt);
 
@@ -147,5 +175,5 @@ export class SyncAccountUseCase {
   }
 }
 
-export { SyncNotFoundError } from "../../../domain/sync";
+export { SyncNotFoundError, SyncRateLimitError } from "../../../domain/sync";
 export type { SyncAccountParams, SyncAccountResult } from "../../../domain/sync";
