@@ -12,13 +12,6 @@ export class StripeProviderError extends Error {
   }
 }
 
-export class UpgradeRequiredError extends Error {
-  constructor(message: string = "Upgrade to Pro to access this feature.") {
-    super(message);
-    this.name = "UpgradeRequiredError";
-  }
-}
-
 export class PlanLimitReachedError extends Error {
   constructor(message: string = "Plan member limit reached. Upgrade to Pro for unlimited members.") {
     super(message);
