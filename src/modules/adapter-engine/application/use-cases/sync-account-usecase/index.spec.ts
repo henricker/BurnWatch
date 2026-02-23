@@ -223,6 +223,117 @@ describe("SyncAccountUseCase", () => {
     expect(prisma.cloudAccount.update).not.toHaveBeenCalled();
   });
 
+  it("allows only one concurrent STARTER sync for the same provider", async () => {
+    const accounts = {
+      "acc-1": {
+        id: "acc-1",
+        organizationId: "org-1",
+        provider: "AWS",
+        encryptedCredentials: "enc-1",
+        lastSyncedAt: null as Date | null,
+        organization: { subscription: { plan: "STARTER" } },
+      },
+      "acc-2": {
+        id: "acc-2",
+        organizationId: "org-1",
+        provider: "AWS",
+        encryptedCredentials: "enc-2",
+        lastSyncedAt: null as Date | null,
+        organization: { subscription: { plan: "STARTER" } },
+      },
+    };
+    const state = {
+      syncing: false,
+      lastSyncedAt: null as Date | null,
+    };
+
+    let providerLock: Promise<void> = Promise.resolve();
+    let releaseProviderLock: (() => void) | null = null;
+
+    const transactionMock = vi.fn().mockImplementation(async (arg: unknown) => {
+      if (Array.isArray(arg)) {
+        return Promise.all(arg as Array<unknown>);
+      }
+      if (typeof arg !== "function") {
+        throw new Error("Unsupported $transaction payload");
+      }
+
+      await providerLock;
+      providerLock = new Promise<void>((resolve) => {
+        releaseProviderLock = resolve;
+      });
+
+      const txCloudAccountFindFirst = vi.fn().mockImplementation((args: { where: Record<string, unknown> }) => {
+        if (args.where.status === "SYNCING") {
+          return Promise.resolve(state.syncing ? { id: "in-flight" } : null);
+        }
+        return Promise.resolve(state.lastSyncedAt ? { lastSyncedAt: state.lastSyncedAt } : null);
+      });
+      const txCloudAccountUpdateMany = vi.fn().mockImplementation(() => {
+        if (state.syncing) {
+          return Promise.resolve({ count: 0 });
+        }
+        state.syncing = true;
+        return Promise.resolve({ count: 1 });
+      });
+
+      try {
+        return await (arg as (tx: unknown) => Promise<unknown>)({
+          $queryRaw: vi.fn().mockResolvedValue([]),
+          cloudAccount: {
+            findFirst: txCloudAccountFindFirst,
+            updateMany: txCloudAccountUpdateMany,
+          },
+        });
+      } finally {
+        releaseProviderLock?.();
+        releaseProviderLock = null;
+      }
+    });
+
+    const prisma = {
+      cloudAccount: {
+        findFirst: vi.fn().mockImplementation((args: { where: { id: string } }) => {
+          return Promise.resolve(accounts[args.where.id as "acc-1" | "acc-2"] ?? null);
+        }),
+        update: vi.fn().mockImplementation((args: { data: { status: string; lastSyncedAt?: Date } }) => {
+          if (args.data.status === "SYNCED") {
+            state.syncing = false;
+            state.lastSyncedAt = args.data.lastSyncedAt ?? state.lastSyncedAt;
+          }
+          if (args.data.status === "SYNC_ERROR") {
+            state.syncing = false;
+          }
+          return Promise.resolve(args.data);
+        }),
+      },
+      dailySpend: { upsert: vi.fn().mockResolvedValue({}) },
+      $transaction: transactionMock,
+    } as unknown as PrismaClient;
+    const encryption = createEncryptionMock();
+    const useCase = new SyncAccountUseCase(prisma, encryption);
+
+    const first = useCase.execute({
+      organizationId: "org-1",
+      accountId: "acc-1",
+    });
+    const second = useCase.execute({
+      organizationId: "org-1",
+      accountId: "acc-2",
+    });
+    const results = await Promise.allSettled([first, second]);
+    const fulfilled = results.filter(
+      (result): result is PromiseFulfilledResult<unknown> => result.status === "fulfilled",
+    );
+    const rejected = results.filter(
+      (result): result is PromiseRejectedResult => result.status === "rejected",
+    );
+
+    expect(fulfilled).toHaveLength(1);
+    expect(rejected).toHaveLength(1);
+    expect(rejected[0]?.reason).toBeInstanceOf(SyncRateLimitError);
+  });
+
   it("throws SyncRateLimitError when plan is PRO and same account was synced within 5min", async () => {
     const now = new Date();
     const twoMinutesAgo = new Date(now.getTime() - 2 * 60 * 1000);
