@@ -58,7 +58,7 @@ export class CreateInviteUseCase {
       });
       const plan = orgWithSubscriptionAndProfiles?.subscription?.plan ?? "STARTER";
       const memberCount = orgWithSubscriptionAndProfiles?.profiles.length ?? 0;
-      const pendingInviteCount = orgWithSubscriptionAndProfiles?.organizationInvites.length ?? 0;
+      const pendingInviteCount = orgWithSubscriptionAndProfiles?.organizationInvites?.length ?? 0;
       if (plan === "STARTER" && memberCount + pendingInviteCount >= 3) {
         throw new PlanLimitReachedError();
       }
