@@ -3,10 +3,14 @@ import type { SpendCategory } from "./serviceNameToCategory";
 export type DateRangeKey = "7D" | "30D" | "MTD";
 export type ProviderFilterKey = "ALL" | "VERCEL" | "AWS" | "GCP";
 
+export type PlanForAnalytics = "STARTER" | "PRO";
+
 export interface DashboardAnalyticsInput {
   organizationId: string;
   dateRange: DateRangeKey;
   providerFilter: ProviderFilterKey;
+  /** Plan for usage guard: max history days. If not set, STARTER is assumed. */
+  plan?: PlanForAnalytics;
 }
 
 export interface EvolutionDay {
@@ -50,4 +54,6 @@ export interface DashboardAnalyticsResult {
   evolution: EvolutionDay[];
   providerBreakdown: ProviderBreakdownItem[];
   categories: CategoryItem[];
+  /** True when date range was clamped to plan limit (e.g. Starter 90 days). */
+  isLimited?: boolean;
 }

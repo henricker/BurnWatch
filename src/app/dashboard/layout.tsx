@@ -1,5 +1,6 @@
 import { getProfileAvatarSignedUrl, getProfileAvatarUrl } from "@/lib/avatar";
 import { getSessionProfile } from "@/lib/auth-server";
+import { hasActiveSubscriptionAccess } from "@/modules/subscriptions/domain/has-active-subscription-access";
 
 import { CompleteProfileGate } from "@/components/complete-profile-gate";
 import { DashboardShell } from "@/components/dashboard-shell";
@@ -15,6 +16,10 @@ export default async function DashboardLayout({
   const avatarUrl =
     (await getProfileAvatarSignedUrl(profile.avatarPath)) ??
     getProfileAvatarUrl(profile.avatarPath);
+
+  const hasActiveAccess = hasActiveSubscriptionAccess(organization);
+  const subscriptionRequired = !hasActiveAccess;
+  const allowTrial = subscriptionRequired && !organization.subscriptionId;
 
   return (
     <SidebarProvider>
@@ -36,6 +41,8 @@ export default async function DashboardLayout({
           locale={profile.locale}
           avatarUrl={avatarUrl}
           profileDisplayName={[profile.firstName, profile.lastName].filter(Boolean).join(" ") || null}
+          subscriptionRequired={subscriptionRequired}
+          allowTrial={allowTrial}
         >
           {children}
         </DashboardShell>

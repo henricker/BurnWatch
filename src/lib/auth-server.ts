@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-import type { Organization, Profile } from "@prisma/client";
+import type { Organization, Profile, Subscription } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -9,7 +9,7 @@ export interface SessionProfile {
   userId: string;
   email: string | null;
   profile: Profile;
-  organization: Organization;
+  organization: Organization & { subscription: Subscription | null };
 }
 
 /**
@@ -61,7 +61,7 @@ export async function getSessionProfile(): Promise<SessionProfile> {
 
   const profile = await prisma.profile.findFirst({
     where: { userId: user.id },
-    include: { organization: true },
+    include: { organization: { include: { subscription: true } } },
   });
 
   if (!profile) {

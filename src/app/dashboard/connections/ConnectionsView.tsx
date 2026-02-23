@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
   Cloud,
@@ -19,6 +20,7 @@ import {
   Save,
   Loader2,
   AlertTriangle,
+  CreditCard,
 } from "lucide-react";
 
 import {
@@ -163,6 +165,7 @@ export function ConnectionsView() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [syncingIds, setSyncingIds] = useState<Set<string>>(new Set());
+  const [syncRateLimitDialogOpen, setSyncRateLimitDialogOpen] = useState(false);
 
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editModalAccount, setEditModalAccount] = useState<AccountRow | null>(null);
@@ -246,6 +249,15 @@ export function ConnectionsView() {
         next.delete(accountId);
         return next;
       });
+      if (res.status === 429) {
+        setAccounts((prev) =>
+          prev.map((a) =>
+            a.id === accountId ? { ...a, status: acc.status, lastSyncError: acc.lastSyncError } : a,
+          ),
+        );
+        setSyncRateLimitDialogOpen(true);
+        return;
+      }
       if (!res.ok) {
         setAccounts((prev) =>
           prev.map((a) =>
@@ -617,6 +629,32 @@ export function ConnectionsView() {
           router.refresh();
         }}
       />
+
+      {/* Sync rate limit paywall */}
+      <Dialog open={syncRateLimitDialogOpen} onOpenChange={setSyncRateLimitDialogOpen}>
+        <DialogContent className="max-w-md border-slate-200 dark:border-zinc-800">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-orange-600 dark:text-orange-500">
+              <AlertTriangle className="size-5 shrink-0" />
+              {t("syncRateLimitPaywallTitle")}
+            </DialogTitle>
+            <DialogDescription className="text-slate-600 dark:text-zinc-400">
+              {t("syncRateLimitPaywallDescription")}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-3 border-t border-slate-200 pt-4 dark:border-zinc-800">
+            <Button variant="outline" onClick={() => setSyncRateLimitDialogOpen(false)}>
+              {t("deleteConfirmCancel")}
+            </Button>
+            <Button asChild className="gap-2 bg-orange-500 hover:bg-orange-600 text-white">
+              <Link href="/dashboard/subscription">
+                <CreditCard className="size-4" />
+                {t("syncRateLimitUpgradeToPro")}
+              </Link>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
