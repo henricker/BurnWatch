@@ -164,9 +164,16 @@ describe("HandleStripeWebhookUseCase", () => {
       currentPeriodEnd: null,
     });
     const updateMany = vi.fn().mockResolvedValue({ count: 1 });
-    const prisma = {
+    const txClient = {
       subscription: { upsert, updateMany: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
       organization: { updateMany },
+    };
+    const transaction = vi.fn(
+      async (callback: (tx: typeof txClient) => Promise<unknown>) => callback(txClient),
+    );
+    const prisma = {
+      ...txClient,
+      $transaction: transaction,
     } as unknown as PrismaClient;
     const stripe = createStripeProviderMock({
       retrieveSubscription: vi.fn().mockRejectedValue(new Error("Stripe timeout")),
@@ -202,9 +209,10 @@ describe("HandleStripeWebhookUseCase", () => {
       }),
     );
     expect(updateMany).toHaveBeenCalledWith({
-      where: { profiles: { some: { userId: "user-1" } } },
+      where: { profiles: { some: { userId: "user-1", role: "OWNER" } } },
       data: { subscriptionId: "sub-db-1" },
     });
+    expect(transaction).toHaveBeenCalledTimes(1);
   });
 
   it("updates subscription and sets cancelAt on customer.subscription.updated", async () => {
