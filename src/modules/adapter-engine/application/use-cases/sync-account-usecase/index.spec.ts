@@ -19,6 +19,40 @@ function createEncryptionMock(): EncryptionService {
   return { decrypt: vi.fn(), encrypt: vi.fn() } as unknown as EncryptionService;
 }
 
+function createPrismaTransactionMock(params?: {
+  txQueryRaw?: ReturnType<typeof vi.fn>;
+  txCloudAccountFindFirst?: ReturnType<typeof vi.fn>;
+  txCloudAccountUpdateMany?: ReturnType<typeof vi.fn>;
+}) {
+  const txQueryRaw = params?.txQueryRaw ?? vi.fn().mockResolvedValue([]);
+  const txCloudAccountFindFirst = params?.txCloudAccountFindFirst ?? vi.fn();
+  const txCloudAccountUpdateMany =
+    params?.txCloudAccountUpdateMany ?? vi.fn().mockResolvedValue({ count: 1 });
+
+  const transactionMock = vi.fn().mockImplementation((arg: unknown) => {
+    if (typeof arg === "function") {
+      return (arg as (tx: unknown) => Promise<unknown>)({
+        $queryRaw: txQueryRaw,
+        cloudAccount: {
+          findFirst: txCloudAccountFindFirst,
+          updateMany: txCloudAccountUpdateMany,
+        },
+      });
+    }
+    if (Array.isArray(arg)) {
+      return Promise.all(arg as Array<unknown>);
+    }
+    return Promise.reject(new Error("Unsupported $transaction payload"));
+  });
+
+  return {
+    transactionMock,
+    txQueryRaw,
+    txCloudAccountFindFirst,
+    txCloudAccountUpdateMany,
+  };
+}
+
 describe("SyncAccountUseCase", () => {
   it("throws SyncNotFoundError when account does not exist", async () => {
     const prisma = {
@@ -63,13 +97,22 @@ describe("SyncAccountUseCase", () => {
       });
     });
 
+    const txCloudAccountFindFirst = vi
+      .fn()
+      .mockResolvedValueOnce(null) // no existing SYNCING account for provider
+      .mockResolvedValueOnce(null); // no lastSyncedAt for provider
+    const { transactionMock, txCloudAccountUpdateMany } = createPrismaTransactionMock({
+      txCloudAccountFindFirst,
+      txCloudAccountUpdateMany: vi.fn().mockResolvedValue({ count: 1 }),
+    });
+
     const prisma = {
       cloudAccount: {
-        findFirst: vi.fn().mockResolvedValueOnce(account).mockResolvedValueOnce(null),
+        findFirst: vi.fn().mockResolvedValue(account),
         update: updateMock,
       },
       dailySpend: { upsert: vi.fn().mockResolvedValue({}) },
-      $transaction: vi.fn().mockImplementation((fns: unknown[]) => Promise.all((fns as Array<() => Promise<unknown>>).map((fn) => fn()))),
+      $transaction: transactionMock,
     } as unknown as PrismaClient;
     const encryption = createEncryptionMock();
 
@@ -82,9 +125,16 @@ describe("SyncAccountUseCase", () => {
     expect(result.status).toBe("SYNCED");
     expect(result.lastSyncError).toBeNull();
     expect(result.rowsUpserted).toBe(0);
-    expect(updates).toHaveLength(2);
-    expect(updates[0]).toMatchObject({ status: "SYNCING", lastSyncError: null });
-    expect(updates[1]).toMatchObject({ status: "SYNCED", lastSyncError: null });
+    expect(updates).toHaveLength(1);
+    expect(updates[0]).toMatchObject({ status: "SYNCED", lastSyncError: null });
+    expect(txCloudAccountUpdateMany).toHaveBeenCalledWith({
+      where: {
+        id: "acc-1",
+        organizationId: "org-1",
+        status: { not: "SYNCING" },
+      },
+      data: { status: "SYNCING", lastSyncError: null },
+    });
   });
 
   it("throws SyncRateLimitError when plan is STARTER and same provider was synced within 24h", async () => {
@@ -98,14 +148,23 @@ describe("SyncAccountUseCase", () => {
       lastSyncedAt: null as Date | null,
       organization: { subscription: { plan: "STARTER" } },
     };
+    const txCloudAccountFindFirst = vi
+      .fn()
+      .mockResolvedValueOnce(null) // no current SYNCING account
+      .mockResolvedValueOnce({ lastSyncedAt: oneHourAgo }); // provider was synced recently
+    const txCloudAccountUpdateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const { transactionMock, txCloudAccountUpdateMany: updateManyMock } =
+      createPrismaTransactionMock({
+        txCloudAccountFindFirst,
+        txCloudAccountUpdateMany,
+      });
+
     const prisma = {
       cloudAccount: {
-        findFirst: vi
-          .fn()
-          .mockResolvedValueOnce(account)
-          .mockResolvedValueOnce({ lastSyncedAt: oneHourAgo }),
+        findFirst: vi.fn().mockResolvedValue(account),
         update: vi.fn(),
       },
+      $transaction: transactionMock,
     } as unknown as PrismaClient;
     const encryption = createEncryptionMock();
 
@@ -118,6 +177,49 @@ describe("SyncAccountUseCase", () => {
       }),
     ).rejects.toThrow(SyncRateLimitError);
 
+    expect(prisma.cloudAccount.update).not.toHaveBeenCalled();
+    expect(updateManyMock).not.toHaveBeenCalled();
+  });
+
+  it("throws SyncRateLimitError when plan is STARTER and provider already has a SYNCING account", async () => {
+    const account = {
+      id: "acc-1",
+      organizationId: "org-1",
+      provider: "AWS",
+      encryptedCredentials: "enc",
+      lastSyncedAt: null as Date | null,
+      organization: { subscription: { plan: "STARTER" } },
+    };
+    const txCloudAccountFindFirst = vi
+      .fn()
+      .mockResolvedValueOnce({ id: "acc-2" }); // another provider account is currently SYNCING
+    const txCloudAccountUpdateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const { transactionMock, txCloudAccountUpdateMany: updateManyMock, txQueryRaw } =
+      createPrismaTransactionMock({
+        txCloudAccountFindFirst,
+        txCloudAccountUpdateMany,
+      });
+
+    const prisma = {
+      cloudAccount: {
+        findFirst: vi.fn().mockResolvedValue(account),
+        update: vi.fn(),
+      },
+      $transaction: transactionMock,
+    } as unknown as PrismaClient;
+    const encryption = createEncryptionMock();
+
+    const useCase = new SyncAccountUseCase(prisma, encryption);
+
+    await expect(
+      useCase.execute({
+        organizationId: "org-1",
+        accountId: "acc-1",
+      }),
+    ).rejects.toThrow(SyncRateLimitError);
+
+    expect(txQueryRaw).toHaveBeenCalledTimes(1);
+    expect(updateManyMock).not.toHaveBeenCalled();
     expect(prisma.cloudAccount.update).not.toHaveBeenCalled();
   });
 
@@ -132,11 +234,20 @@ describe("SyncAccountUseCase", () => {
       lastSyncedAt: twoMinutesAgo,
       organization: { subscription: { plan: "PRO" } },
     };
+    const txCloudAccountFindFirst = vi.fn().mockResolvedValue({ lastSyncedAt: twoMinutesAgo });
+    const txCloudAccountUpdateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const { transactionMock, txCloudAccountUpdateMany: updateManyMock, txQueryRaw } =
+      createPrismaTransactionMock({
+        txCloudAccountFindFirst,
+        txCloudAccountUpdateMany,
+      });
+
     const prisma = {
       cloudAccount: {
         findFirst: vi.fn().mockResolvedValue(account),
         update: vi.fn(),
       },
+      $transaction: transactionMock,
     } as unknown as PrismaClient;
     const encryption = createEncryptionMock();
 
@@ -150,5 +261,7 @@ describe("SyncAccountUseCase", () => {
     ).rejects.toThrow(SyncRateLimitError);
 
     expect(prisma.cloudAccount.update).not.toHaveBeenCalled();
+    expect(txQueryRaw).not.toHaveBeenCalled();
+    expect(updateManyMock).not.toHaveBeenCalled();
   });
 });

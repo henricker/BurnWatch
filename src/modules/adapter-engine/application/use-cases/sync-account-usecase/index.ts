@@ -81,32 +81,61 @@ export class SyncAccountUseCase {
     const plan = account.organization?.subscription?.plan ?? "STARTER";
     const now = new Date();
 
-    if (plan === "STARTER") {
-      const latestSyncInOrgForProvider = await this.prisma.cloudAccount.findFirst({
-        where: { organizationId, provider: account.provider },
-        orderBy: { lastSyncedAt: "desc" },
-        select: { lastSyncedAt: true },
-      });
-      const lastSync = latestSyncInOrgForProvider?.lastSyncedAt;
-      if (lastSync) {
-        const msSince = now.getTime() - lastSync.getTime();
-        if (msSince < 24 * 60 * 60 * 1000) {
-          throw new SyncRateLimitError();
-        }
-      }
-    } else {
-      const lastSync = account.lastSyncedAt;
-      if (lastSync) {
-        const msSince = now.getTime() - lastSync.getTime();
-        if (msSince < 5 * 60 * 1000) {
-          throw new SyncRateLimitError();
-        }
-      }
-    }
+    await this.prisma.$transaction(async (tx) => {
+      if (plan === "STARTER") {
+        // Serialize STARTER sync starts per (organization, provider) to avoid TOCTOU races.
+        await tx.$queryRaw`
+          SELECT pg_advisory_xact_lock(
+            hashtext(${organizationId}),
+            hashtext(${account.provider})
+          )
+        `;
 
-    await this.prisma.cloudAccount.update({
-      where: { id: accountId },
-      data: { status: "SYNCING", lastSyncError: null },
+        const syncingAccount = await tx.cloudAccount.findFirst({
+          where: { organizationId, provider: account.provider, status: "SYNCING" },
+          select: { id: true },
+        });
+        if (syncingAccount) {
+          throw new SyncRateLimitError();
+        }
+
+        const latestSyncInOrgForProvider = await tx.cloudAccount.findFirst({
+          where: { organizationId, provider: account.provider },
+          orderBy: { lastSyncedAt: "desc" },
+          select: { lastSyncedAt: true },
+        });
+        const lastSync = latestSyncInOrgForProvider?.lastSyncedAt;
+        if (lastSync) {
+          const msSince = now.getTime() - lastSync.getTime();
+          if (msSince < 24 * 60 * 60 * 1000) {
+            throw new SyncRateLimitError();
+          }
+        }
+      } else {
+        const currentAccount = await tx.cloudAccount.findFirst({
+          where: { id: accountId, organizationId },
+          select: { lastSyncedAt: true },
+        });
+        const lastSync = currentAccount?.lastSyncedAt;
+        if (lastSync) {
+          const msSince = now.getTime() - lastSync.getTime();
+          if (msSince < 5 * 60 * 1000) {
+            throw new SyncRateLimitError();
+          }
+        }
+      }
+
+      const markSyncingResult = await tx.cloudAccount.updateMany({
+        where: {
+          id: accountId,
+          organizationId,
+          status: { not: "SYNCING" },
+        },
+        data: { status: "SYNCING", lastSyncError: null },
+      });
+      if (markSyncingResult.count === 0) {
+        throw new SyncRateLimitError();
+      }
     });
 
     let rowsUpserted = 0;
