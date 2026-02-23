@@ -1,5 +1,3 @@
-import type { PrismaClient } from "@prisma/client";
-
 import type { CreateCheckoutSessionParams, CreateCheckoutSessionResult } from "../../../domain/types";
 import type { IStripeProvider } from "../../../domain/stripeProvider";
 import { StripeConfigError } from "../../../domain/errors";

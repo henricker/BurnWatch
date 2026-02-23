@@ -112,7 +112,11 @@ export class GetDashboardAnalyticsUseCase {
     const now = new Date();
     const plan = input.plan ?? "STARTER";
     const maxDays = PLAN_MAX_DAYS[plan] ?? 90;
-    let { start, end, previousStart, previousEnd } = resolveDateRange(input.dateRange, now);
+    const resolved = resolveDateRange(input.dateRange, now);
+    let start = resolved.start;
+    const end = resolved.end;
+    let previousStart = resolved.previousStart;
+    let previousEnd = resolved.previousEnd;
     let isLimited = false;
 
     const todayStart = startOfDayUTC(now);

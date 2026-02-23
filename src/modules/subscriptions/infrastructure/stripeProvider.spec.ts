@@ -18,6 +18,7 @@ const {
 vi.mock("stripe", () => {
   class StripeMock {
     static webhooks = { constructEvent: mockConstructEvent };
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- mock constructor signature for Stripe(key, opts)
     constructor(_key?: string, _opts?: unknown) {
       return {
         checkout: { sessions: { create: mockCheckoutCreate } },

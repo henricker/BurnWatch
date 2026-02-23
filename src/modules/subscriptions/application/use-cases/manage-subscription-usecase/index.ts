@@ -2,7 +2,6 @@ import type { PrismaClient } from "@prisma/client";
 
 import type { ManageSubscriptionParams, ManageSubscriptionResult } from "../../../domain/types";
 import type { IStripeProvider } from "../../../domain/stripeProvider";
-import { StripeConfigError } from "../../../domain/errors";
 
 export class ManageSubscriptionUseCase {
   constructor(
