@@ -81,7 +81,7 @@ export class HandleStripeWebhookUseCase {
       return;
     }
 
-    let status = "active";
+    let status = "incomplete";
     let currentPeriodEnd: Date | null = null;
 
     if (subscriptionId) {

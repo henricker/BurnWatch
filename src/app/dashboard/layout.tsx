@@ -1,18 +1,10 @@
 import { getProfileAvatarSignedUrl, getProfileAvatarUrl } from "@/lib/avatar";
 import { getSessionProfile } from "@/lib/auth-server";
+import { hasActiveSubscriptionAccess } from "@/modules/subscriptions/domain/has-active-subscription-access";
 
 import { CompleteProfileGate } from "@/components/complete-profile-gate";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { SidebarProvider } from "@/components/ui/sidebar";
-
-function hasActiveSubscriptionAccess(
-  organization: { subscriptionId: string | null; subscription: { cancelAt: Date | null; currentPeriodEnd: Date | null } | null },
-): boolean {
-  if (!organization.subscriptionId || !organization.subscription) return false;
-  const endDate = organization.subscription.cancelAt ?? organization.subscription.currentPeriodEnd;
-  if (!endDate) return true;
-  return new Date() <= endDate;
-}
 
 export default async function DashboardLayout({
   children,

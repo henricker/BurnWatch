@@ -153,6 +153,60 @@ describe("HandleStripeWebhookUseCase", () => {
     expect(transaction).toHaveBeenCalledTimes(1);
   });
 
+  it("marks subscription as incomplete when Stripe retrieve fails on checkout", async () => {
+    const upsert = vi.fn().mockResolvedValue({
+      id: "sub-db-1",
+      userId: "user-1",
+      stripeCustomerId: "cus_1",
+      stripeSubscriptionId: "sub_1",
+      status: "incomplete",
+      plan: "PRO",
+      currentPeriodEnd: null,
+    });
+    const updateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const prisma = {
+      subscription: { upsert, updateMany: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
+      organization: { updateMany },
+    } as unknown as PrismaClient;
+    const stripe = createStripeProviderMock({
+      retrieveSubscription: vi.fn().mockRejectedValue(new Error("Stripe timeout")),
+    });
+
+    const useCase = new HandleStripeWebhookUseCase(prisma, stripe);
+    const event = {
+      id: "evt_1",
+      type: "checkout.session.completed",
+      data: {
+        object: {
+          metadata: { userId: "user-1", plan: "PRO" },
+          customer: "cus_1",
+          subscription: "sub_1",
+        },
+      },
+    } as unknown as import("stripe").Stripe.Event;
+
+    await useCase.execute(event);
+
+    expect(upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          stripeSubscriptionId: "sub_1",
+          status: "incomplete",
+          currentPeriodEnd: null,
+        }),
+        update: expect.objectContaining({
+          stripeSubscriptionId: "sub_1",
+          status: "incomplete",
+          currentPeriodEnd: null,
+        }),
+      }),
+    );
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { profiles: { some: { userId: "user-1" } } },
+      data: { subscriptionId: "sub-db-1" },
+    });
+  });
+
   it("updates subscription and sets cancelAt on customer.subscription.updated", async () => {
     const updateMany = vi.fn().mockResolvedValue({ count: 1 });
     const prisma = {
