@@ -31,7 +31,12 @@ describe("GetDashboardAnalyticsUseCase", () => {
 
   function runUseCase(
     prisma: ReturnType<typeof createPrismaMock>,
-    input: { organizationId: string; dateRange: "7D" | "30D" | "MTD"; providerFilter: "ALL" | "VERCEL" | "AWS" | "GCP" },
+    input: {
+      organizationId: string;
+      dateRange: "7D" | "30D" | "MTD";
+      providerFilter: "ALL" | "VERCEL" | "AWS" | "GCP";
+      plan?: "STARTER" | "PRO";
+    },
   ) {
     const useCase = new GetDashboardAnalyticsUseCase(prisma as unknown as PrismaClient);
     return useCase.execute(input);
@@ -235,6 +240,32 @@ describe("GetDashboardAnalyticsUseCase", () => {
     const database = result.categories.find((c) => c.label === "Database");
     expect(compute?.cents).toBe(100);
     expect(database?.cents).toBe(200);
+  });
+
+  it("uses plan STARTER by default and does not set isLimited for 30D range", async () => {
+    const prisma = createPrismaMock([], 0);
+    const result = await runUseCase(prisma, {
+      organizationId: orgId,
+      dateRange: "30D",
+      providerFilter: "ALL",
+    });
+    expect(result.totalCents).toBe(0);
+    expect(result.isLimited).toBeUndefined();
+  });
+
+  it("accepts plan PRO and returns same result shape without isLimited for 30D", async () => {
+    const prisma = createPrismaMock([], 0);
+    const result = await runUseCase(prisma, {
+      organizationId: orgId,
+      dateRange: "30D",
+      providerFilter: "ALL",
+      plan: "PRO",
+    });
+    expect(result).toHaveProperty("totalCents");
+    expect(result).toHaveProperty("evolution");
+    expect(result).toHaveProperty("providerBreakdown");
+    expect(result).toHaveProperty("categories");
+    expect(result.isLimited).toBeUndefined();
   });
 
   it("filters by provider when providerFilter is not ALL", async () => {

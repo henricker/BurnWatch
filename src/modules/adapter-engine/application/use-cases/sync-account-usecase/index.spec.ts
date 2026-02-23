@@ -13,7 +13,7 @@ vi.mock("../../../infrastructure/providers/awsProvider", () => {
   return { AwsProvider: AwsProviderMock };
 });
 
-import { SyncAccountUseCase, SyncNotFoundError } from "./index";
+import { SyncAccountUseCase, SyncNotFoundError, SyncRateLimitError } from "./index";
 
 function createEncryptionMock(): EncryptionService {
   return { decrypt: vi.fn(), encrypt: vi.fn() } as unknown as EncryptionService;
@@ -47,6 +47,8 @@ describe("SyncAccountUseCase", () => {
       organizationId: "org-1",
       provider: "AWS",
       encryptedCredentials: "enc",
+      lastSyncedAt: null as Date | null,
+      organization: { subscription: null as { plan: string } | null },
     };
     const updates: unknown[] = [];
     const updateMock = vi.fn().mockImplementation((args: { where: { id: string }; data: unknown }) => {
@@ -63,7 +65,7 @@ describe("SyncAccountUseCase", () => {
 
     const prisma = {
       cloudAccount: {
-        findFirst: vi.fn().mockResolvedValue(account),
+        findFirst: vi.fn().mockResolvedValueOnce(account).mockResolvedValueOnce(null),
         update: updateMock,
       },
       dailySpend: { upsert: vi.fn().mockResolvedValue({}) },
@@ -83,5 +85,70 @@ describe("SyncAccountUseCase", () => {
     expect(updates).toHaveLength(2);
     expect(updates[0]).toMatchObject({ status: "SYNCING", lastSyncError: null });
     expect(updates[1]).toMatchObject({ status: "SYNCED", lastSyncError: null });
+  });
+
+  it("throws SyncRateLimitError when plan is STARTER and same provider was synced within 24h", async () => {
+    const now = new Date();
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+    const account = {
+      id: "acc-1",
+      organizationId: "org-1",
+      provider: "AWS",
+      encryptedCredentials: "enc",
+      lastSyncedAt: null as Date | null,
+      organization: { subscription: { plan: "STARTER" } },
+    };
+    const prisma = {
+      cloudAccount: {
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(account)
+          .mockResolvedValueOnce({ lastSyncedAt: oneHourAgo }),
+        update: vi.fn(),
+      },
+    } as unknown as PrismaClient;
+    const encryption = createEncryptionMock();
+
+    const useCase = new SyncAccountUseCase(prisma, encryption);
+
+    await expect(
+      useCase.execute({
+        organizationId: "org-1",
+        accountId: "acc-1",
+      }),
+    ).rejects.toThrow(SyncRateLimitError);
+
+    expect(prisma.cloudAccount.update).not.toHaveBeenCalled();
+  });
+
+  it("throws SyncRateLimitError when plan is PRO and same account was synced within 5min", async () => {
+    const now = new Date();
+    const twoMinutesAgo = new Date(now.getTime() - 2 * 60 * 1000);
+    const account = {
+      id: "acc-1",
+      organizationId: "org-1",
+      provider: "AWS",
+      encryptedCredentials: "enc",
+      lastSyncedAt: twoMinutesAgo,
+      organization: { subscription: { plan: "PRO" } },
+    };
+    const prisma = {
+      cloudAccount: {
+        findFirst: vi.fn().mockResolvedValue(account),
+        update: vi.fn(),
+      },
+    } as unknown as PrismaClient;
+    const encryption = createEncryptionMock();
+
+    const useCase = new SyncAccountUseCase(prisma, encryption);
+
+    await expect(
+      useCase.execute({
+        organizationId: "org-1",
+        accountId: "acc-1",
+      }),
+    ).rejects.toThrow(SyncRateLimitError);
+
+    expect(prisma.cloudAccount.update).not.toHaveBeenCalled();
   });
 });
