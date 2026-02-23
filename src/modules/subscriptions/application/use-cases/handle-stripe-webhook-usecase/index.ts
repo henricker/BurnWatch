@@ -103,28 +103,30 @@ export class HandleStripeWebhookUseCase {
 
     const plan = toPlan(planSlug);
 
-    const sub = await this.prisma.subscription.upsert({
-      where: { userId },
-      create: {
-        userId,
-        stripeCustomerId: customerId,
-        stripeSubscriptionId: subscriptionId,
-        status,
-        plan,
-        currentPeriodEnd,
-      },
-      update: {
-        stripeCustomerId: customerId,
-        stripeSubscriptionId: subscriptionId,
-        status,
-        plan,
-        currentPeriodEnd,
-      },
-    });
+    await this.prisma.$transaction(async (tx) => {
+      const sub = await tx.subscription.upsert({
+        where: { userId },
+        create: {
+          userId,
+          stripeCustomerId: customerId,
+          stripeSubscriptionId: subscriptionId,
+          status,
+          plan,
+          currentPeriodEnd,
+        },
+        update: {
+          stripeCustomerId: customerId,
+          stripeSubscriptionId: subscriptionId,
+          status,
+          plan,
+          currentPeriodEnd,
+        },
+      });
 
-    await this.prisma.organization.updateMany({
-      where: { profiles: { some: { userId, role: "OWNER" } } },
-      data: { subscriptionId: sub.id },
+      await tx.organization.updateMany({
+        where: { profiles: { some: { userId, role: "OWNER" } } },
+        data: { subscriptionId: sub.id },
+      });
     });
 
     if (process.env.NODE_ENV !== "test") {
@@ -165,22 +167,28 @@ export class HandleStripeWebhookUseCase {
     const subscription = event.data.object as Stripe.Subscription;
     const subscriptionId = subscription.id;
 
-    const sub = await this.prisma.subscription.findUnique({
-      where: { stripeSubscriptionId: subscriptionId },
-      select: { id: true },
-    });
-    if (sub) {
-      await this.prisma.subscription.update({
+    const deletedResult = await this.prisma.$transaction(async (tx) => {
+      const sub = await tx.subscription.findUnique({
+        where: { stripeSubscriptionId: subscriptionId },
+        select: { id: true },
+      });
+      if (!sub) return null;
+
+      await tx.subscription.update({
         where: { id: sub.id },
         data: { status: "canceled", currentPeriodEnd: null, cancelAt: null },
       });
-      const unlinked = await this.prisma.organization.updateMany({
+      const unlinked = await tx.organization.updateMany({
         where: { subscriptionId: sub.id },
         data: { subscriptionId: null },
       });
+      return { unlinkedCount: unlinked.count };
+    });
+
+    if (deletedResult) {
       if (process.env.NODE_ENV !== "test") {
         console.log(
-          `${logPrefix} customer.subscription.deleted subscriptionId=${subscriptionId} orgsUnlinked=${unlinked.count}`,
+          `${logPrefix} customer.subscription.deleted subscriptionId=${subscriptionId} orgsUnlinked=${deletedResult.unlinkedCount}`,
         );
       }
     } else if (process.env.NODE_ENV !== "test") {

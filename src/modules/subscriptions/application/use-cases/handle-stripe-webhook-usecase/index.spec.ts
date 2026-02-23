@@ -100,9 +100,16 @@ describe("HandleStripeWebhookUseCase", () => {
       currentPeriodEnd: new Date(),
     });
     const updateMany = vi.fn().mockResolvedValue({ count: 1 });
-    const prisma = {
+    const txClient = {
       subscription: { upsert, updateMany: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
       organization: { updateMany },
+    };
+    const transaction = vi.fn(
+      async (callback: (tx: typeof txClient) => Promise<unknown>) => callback(txClient),
+    );
+    const prisma = {
+      ...txClient,
+      $transaction: transaction,
     } as unknown as PrismaClient;
     const stripe = createStripeProviderMock();
 
@@ -143,6 +150,7 @@ describe("HandleStripeWebhookUseCase", () => {
       where: { profiles: { some: { userId: "user-1", role: "OWNER" } } },
       data: { subscriptionId: "sub-db-1" },
     });
+    expect(transaction).toHaveBeenCalledTimes(1);
   });
 
   it("updates subscription and sets cancelAt on customer.subscription.updated", async () => {
@@ -187,7 +195,7 @@ describe("HandleStripeWebhookUseCase", () => {
     const findUnique = vi.fn().mockResolvedValue({ id: "sub-db-1" });
     const subUpdate = vi.fn().mockResolvedValue(undefined);
     const orgUpdateMany = vi.fn().mockResolvedValue({ count: 1 });
-    const prisma = {
+    const txClient = {
       subscription: {
         upsert: vi.fn(),
         updateMany: vi.fn(),
@@ -195,6 +203,13 @@ describe("HandleStripeWebhookUseCase", () => {
         update: subUpdate,
       },
       organization: { updateMany: orgUpdateMany },
+    };
+    const transaction = vi.fn(
+      async (callback: (tx: typeof txClient) => Promise<unknown>) => callback(txClient),
+    );
+    const prisma = {
+      ...txClient,
+      $transaction: transaction,
     } as unknown as PrismaClient;
     const stripe = createStripeProviderMock();
 
@@ -221,13 +236,21 @@ describe("HandleStripeWebhookUseCase", () => {
       where: { subscriptionId: "sub-db-1" },
       data: { subscriptionId: null },
     });
+    expect(transaction).toHaveBeenCalledTimes(1);
   });
 
   it("does not throw when customer.subscription.deleted for unknown subscriptionId", async () => {
     const findUnique = vi.fn().mockResolvedValue(null);
-    const prisma = {
+    const txClient = {
       subscription: { upsert: vi.fn(), updateMany: vi.fn(), findUnique, update: vi.fn() },
       organization: { updateMany: vi.fn() },
+    };
+    const transaction = vi.fn(
+      async (callback: (tx: typeof txClient) => Promise<unknown>) => callback(txClient),
+    );
+    const prisma = {
+      ...txClient,
+      $transaction: transaction,
     } as unknown as PrismaClient;
     const stripe = createStripeProviderMock();
 
@@ -239,6 +262,7 @@ describe("HandleStripeWebhookUseCase", () => {
     } as unknown as import("stripe").Stripe.Event;
 
     await expect(useCase.execute(event)).resolves.toBeUndefined();
-    expect(prisma.organization.updateMany).not.toHaveBeenCalled();
+    expect(txClient.organization.updateMany).not.toHaveBeenCalled();
+    expect(transaction).toHaveBeenCalledTimes(1);
   });
 });
