@@ -7,6 +7,7 @@ import {
   InviteError,
   InviteForbiddenError,
   InviteValidationError,
+  PlanLimitReachedError,
 } from "../../../domain/invite";
 
 export class CreateInviteUseCase {
@@ -38,6 +39,16 @@ export class CreateInviteUseCase {
       }
       if (requesterRole === "ADMIN" && targetRole !== "MEMBER") {
         throw new InviteForbiddenError("ADMIN can only invite MEMBER.");
+      }
+
+      const orgWithSubscriptionAndProfiles = await this.prisma.organization.findUnique({
+        where: { id: organizationId },
+        include: { subscription: true, profiles: true },
+      });
+      const plan = orgWithSubscriptionAndProfiles?.subscription?.plan ?? "STARTER";
+      const memberCount = orgWithSubscriptionAndProfiles?.profiles.length ?? 0;
+      if (plan === "STARTER" && memberCount >= 3) {
+        throw new PlanLimitReachedError();
       }
 
       const now = new Date();
@@ -88,7 +99,8 @@ export class CreateInviteUseCase {
       if (
         err instanceof InviteError ||
         err instanceof InviteForbiddenError ||
-        err instanceof InviteValidationError
+        err instanceof InviteValidationError ||
+        err instanceof PlanLimitReachedError
       ) {
         throw err;
       }
