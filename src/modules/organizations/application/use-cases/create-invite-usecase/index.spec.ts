@@ -14,6 +14,7 @@ function createMocks() {
   organizationFindUnique.mockResolvedValue({
     subscription: null,
     profiles: [{}, {}],
+    organizationInvites: [],
   });
 
   const prisma = {
@@ -128,6 +129,74 @@ describe("CreateInviteUseCase", () => {
         targetRole: "MEMBER",
       }),
     ).rejects.toThrow(PlanLimitReachedError);
+  });
+
+  it("throws PlanLimitReachedError when plan is STARTER with 2 members and 1 pending invite", async () => {
+    const { prisma, supabase, profileFindFirst, organizationFindUnique } = createMocks();
+    profileFindFirst.mockResolvedValue({
+      userId: adminId,
+      organizationId: orgId,
+      role: "OWNER",
+    });
+    organizationFindUnique.mockResolvedValue({
+      subscription: { plan: "STARTER" },
+      profiles: [{ id: "p1" }, { id: "p2" }],
+      organizationInvites: [{ id: "invite-1", email: "other@example.com" }],
+    });
+
+    await expect(
+      new CreateInviteUseCase(prisma, supabase).execute({
+        adminId,
+        organizationId: orgId,
+        guestEmail,
+        targetRole: "MEMBER",
+      }),
+    ).rejects.toThrow(PlanLimitReachedError);
+  });
+
+  it("allows re-sending the same pending invite email on STARTER when org has 2 members", async () => {
+    const { prisma, supabase, profileFindFirst, organizationFindUnique, inviteUpsert, signInWithOtp } = createMocks();
+    profileFindFirst.mockResolvedValue({
+      userId: adminId,
+      organizationId: orgId,
+      role: "OWNER",
+    });
+    organizationFindUnique.mockResolvedValue({
+      subscription: { plan: "STARTER" },
+      profiles: [{ id: "p1" }, { id: "p2" }],
+      organizationInvites: [],
+    });
+    inviteUpsert.mockResolvedValue({
+      id: "invite-id",
+      email: guestEmail.toLowerCase().trim(),
+      role: "MEMBER",
+      expiresAt: new Date(),
+    });
+    signInWithOtp.mockResolvedValue({ data: {}, error: null });
+
+    const useCase = new CreateInviteUseCase(prisma, supabase);
+    const normalizedEmail = guestEmail.toLowerCase().trim();
+    const result = await useCase.execute({
+      adminId,
+      organizationId: orgId,
+      guestEmail,
+      targetRole: "MEMBER",
+    });
+
+    expect(result).toHaveProperty("id", "invite-id");
+    expect(organizationFindUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: orgId },
+        include: expect.objectContaining({
+          organizationInvites: expect.objectContaining({
+            where: expect.objectContaining({
+              email: { not: normalizedEmail },
+              expiresAt: expect.objectContaining({ gt: expect.any(Date) }),
+            }),
+          }),
+        }),
+      }),
+    );
   });
 
   it("allows invite when plan is PRO and org has 3 or more members", async () => {

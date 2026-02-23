@@ -20,6 +20,8 @@ export class CreateInviteUseCase {
     params: CreateInviteParams,
   ): Promise<{ id: string; email: string; role: Role; expiresAt: Date }> {
     const { adminId, organizationId, guestEmail, targetRole, emailRedirectTo } = params;
+    const normalizedGuestEmail = guestEmail.toLowerCase().trim();
+    const now = new Date();
 
     try {
       const requesterProfile = await this.prisma.profile.findFirst({
@@ -43,27 +45,36 @@ export class CreateInviteUseCase {
 
       const orgWithSubscriptionAndProfiles = await this.prisma.organization.findUnique({
         where: { id: organizationId },
-        include: { subscription: true, profiles: true },
+        include: {
+          subscription: true,
+          profiles: true,
+          organizationInvites: {
+            where: {
+              expiresAt: { gt: now },
+              email: { not: normalizedGuestEmail },
+            },
+          },
+        },
       });
       const plan = orgWithSubscriptionAndProfiles?.subscription?.plan ?? "STARTER";
       const memberCount = orgWithSubscriptionAndProfiles?.profiles.length ?? 0;
-      if (plan === "STARTER" && memberCount >= 3) {
+      const pendingInviteCount = orgWithSubscriptionAndProfiles?.organizationInvites.length ?? 0;
+      if (plan === "STARTER" && memberCount + pendingInviteCount >= 3) {
         throw new PlanLimitReachedError();
       }
 
-      const now = new Date();
       const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
       const invite = await this.prisma.organizationInvite.upsert({
         where: {
           org_invite_org_email_unique: {
             organizationId,
-            email: guestEmail.toLowerCase().trim(),
+            email: normalizedGuestEmail,
           },
         },
         create: {
           organizationId,
-          email: guestEmail.toLowerCase().trim(),
+          email: normalizedGuestEmail,
           role: targetRole,
           expiresAt,
         },
