@@ -9,6 +9,7 @@ import type { Role } from "@prisma/client";
 import {
   Bell,
   CloudCog,
+  CreditCard,
   LayoutDashboard,
   Users,
   Settings,
@@ -118,6 +119,7 @@ export function AppSidebar({
     { href: "/dashboard/connections", labelKey: "connections" as const, icon: CloudCog },
     { href: "/dashboard/members", labelKey: "members" as const, icon: Users },
     { href: "/dashboard/notifications", labelKey: "notifications" as const, icon: Bell },
+    { href: "/dashboard/subscription", labelKey: "mySubscription" as const, icon: CreditCard },
     { href: "/dashboard/settings", labelKey: "settings" as const, icon: Settings },
   ] as const;
 

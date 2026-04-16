@@ -6,7 +6,7 @@ import type { EncryptionService } from "@/lib/security/encryption";
 import type { ICloudProvider } from "../../../domain/cloudProvider";
 import { SyncErrorWithKey } from "../../../domain/cloudProvider";
 import type { SyncAccountParams, SyncAccountResult } from "../../../domain/sync";
-import { SyncNotFoundError } from "../../../domain/sync";
+import { SyncNotFoundError, SyncRateLimitError } from "../../../domain/sync";
 import { MockProvider } from "../../../infrastructure/providers/mockProvider";
 import { AwsProvider } from "../../../infrastructure/providers/awsProvider";
 import { VercelProvider } from "../../../infrastructure/providers/vercelProvider";
@@ -69,15 +69,73 @@ export class SyncAccountUseCase {
 
     const account = await this.prisma.cloudAccount.findFirst({
       where: { id: accountId, organizationId },
+      include: {
+        organization: { include: { subscription: true } },
+      },
     });
 
     if (!account) {
       throw new SyncNotFoundError();
     }
 
-    await this.prisma.cloudAccount.update({
-      where: { id: accountId },
-      data: { status: "SYNCING", lastSyncError: null },
+    const plan = account.organization?.subscription?.plan ?? "STARTER";
+    const now = new Date();
+
+    await this.prisma.$transaction(async (tx) => {
+      if (plan === "STARTER") {
+        // Serialize STARTER sync starts per (organization, provider) to avoid TOCTOU races.
+        await tx.$queryRaw`
+          SELECT pg_advisory_xact_lock(
+            hashtext(${organizationId}),
+            hashtext(${account.provider})
+          )
+        `;
+
+        const syncingAccount = await tx.cloudAccount.findFirst({
+          where: { organizationId, provider: account.provider, status: "SYNCING" },
+          select: { id: true },
+        });
+        if (syncingAccount) {
+          throw new SyncRateLimitError();
+        }
+
+        const latestSyncInOrgForProvider = await tx.cloudAccount.findFirst({
+          where: { organizationId, provider: account.provider },
+          orderBy: { lastSyncedAt: "desc" },
+          select: { lastSyncedAt: true },
+        });
+        const lastSync = latestSyncInOrgForProvider?.lastSyncedAt;
+        if (lastSync) {
+          const msSince = now.getTime() - lastSync.getTime();
+          if (msSince < 24 * 60 * 60 * 1000) {
+            throw new SyncRateLimitError();
+          }
+        }
+      } else {
+        const currentAccount = await tx.cloudAccount.findFirst({
+          where: { id: accountId, organizationId },
+          select: { lastSyncedAt: true },
+        });
+        const lastSync = currentAccount?.lastSyncedAt;
+        if (lastSync) {
+          const msSince = now.getTime() - lastSync.getTime();
+          if (msSince < 5 * 60 * 1000) {
+            throw new SyncRateLimitError();
+          }
+        }
+      }
+
+      const markSyncingResult = await tx.cloudAccount.updateMany({
+        where: {
+          id: accountId,
+          organizationId,
+          status: { not: "SYNCING" },
+        },
+        data: { status: "SYNCING", lastSyncError: null },
+      });
+      if (markSyncingResult.count === 0) {
+        throw new SyncRateLimitError();
+      }
     });
 
     let rowsUpserted = 0;
@@ -85,7 +143,6 @@ export class SyncAccountUseCase {
 
     try {
       const provider = getProvider(account.provider, this.encryption);
-      const now = new Date();
       const todayStart = startOfDayUTC(now);
       let cursor = getSyncCursorStart(account.lastSyncedAt);
 
@@ -147,5 +204,5 @@ export class SyncAccountUseCase {
   }
 }
 
-export { SyncNotFoundError } from "../../../domain/sync";
+export { SyncNotFoundError, SyncRateLimitError } from "../../../domain/sync";
 export type { SyncAccountParams, SyncAccountResult } from "../../../domain/sync";

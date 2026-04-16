@@ -10,8 +10,11 @@ import {
   CloudCredentialsNotFoundError,
   CloudCredentialsValidationError,
 } from "@/modules/cloud-provider-credentials/domain/cloudCredentials";
-import { SyncAccountUseCase } from "@/modules/adapter-engine/application/use-cases/sync-account-usecase";
-import { SyncNotFoundError } from "@/modules/adapter-engine/domain/sync";
+import {
+  SyncAccountUseCase,
+  SyncNotFoundError,
+  SyncRateLimitError,
+} from "@/modules/adapter-engine/application/use-cases/sync-account-usecase";
 import { GetProfileByUserIdUseCase } from "@/modules/organizations/application/use-cases/get-profile-by-user-id-usecase";
 import { TriggerAnomalyAlertAfterSyncUseCase } from "@/modules/notifications/application/use-cases/trigger-anomaly-alert-after-sync-usecase";
 
@@ -119,6 +122,9 @@ export async function POST(
   } catch (err) {
     if (err instanceof SyncNotFoundError) {
       return NextResponse.json({ error: "Cloud account not found" }, { status: 404 });
+    }
+    if (err instanceof SyncRateLimitError) {
+      return NextResponse.json({ error: err.message }, { status: 429 });
     }
     if (process.env.NODE_ENV !== "test") {
       console.error("[POST /api/cloud-accounts/[id]] sync error:", err);

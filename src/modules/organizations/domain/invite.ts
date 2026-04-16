@@ -21,6 +21,13 @@ export class InviteValidationError extends InviteError {
   }
 }
 
+export class PlanLimitReachedError extends InviteError {
+  constructor(message: string = "Plan member limit reached. Upgrade to Pro for unlimited members.") {
+    super(message);
+    this.name = "PlanLimitReachedError";
+  }
+}
+
 export interface CreateInviteParams {
   adminId: string;
   organizationId: string;

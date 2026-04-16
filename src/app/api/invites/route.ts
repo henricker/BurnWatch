@@ -7,7 +7,7 @@ import { createSupabaseOtpClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { CreateInviteUseCase } from "@/modules/organizations/application/use-cases/create-invite-usecase";
 import { GetProfileByUserAndOrganizationUseCase } from "@/modules/organizations/application/use-cases/get-profile-by-user-and-organization-usecase";
-import { InviteError } from "@/modules/organizations/domain/invite";
+import { InviteError, PlanLimitReachedError } from "@/modules/organizations/domain/invite";
 
 export async function POST(request: Request) {
   const supabase = await createSupabaseServerClient();
@@ -78,6 +78,12 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ ok: true });
   } catch (err) {
+    if (err instanceof PlanLimitReachedError) {
+      return NextResponse.json(
+        { error: err.message },
+        { status: 403 },
+      );
+    }
     if (err instanceof InviteError) {
       const message = err.message;
       const isRateLimit =

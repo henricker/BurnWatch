@@ -7,6 +7,7 @@ import {
   InviteError,
   InviteForbiddenError,
   InviteValidationError,
+  PlanLimitReachedError,
 } from "../../../domain/invite";
 
 export class CreateInviteUseCase {
@@ -19,6 +20,8 @@ export class CreateInviteUseCase {
     params: CreateInviteParams,
   ): Promise<{ id: string; email: string; role: Role; expiresAt: Date }> {
     const { adminId, organizationId, guestEmail, targetRole, emailRedirectTo } = params;
+    const normalizedGuestEmail = guestEmail.toLowerCase().trim();
+    const now = new Date();
 
     try {
       const requesterProfile = await this.prisma.profile.findFirst({
@@ -40,19 +43,38 @@ export class CreateInviteUseCase {
         throw new InviteForbiddenError("ADMIN can only invite MEMBER.");
       }
 
-      const now = new Date();
+      const orgWithSubscriptionAndProfiles = await this.prisma.organization.findUnique({
+        where: { id: organizationId },
+        include: {
+          subscription: true,
+          profiles: true,
+          organizationInvites: {
+            where: {
+              expiresAt: { gt: now },
+              email: { not: normalizedGuestEmail },
+            },
+          },
+        },
+      });
+      const plan = orgWithSubscriptionAndProfiles?.subscription?.plan ?? "STARTER";
+      const memberCount = orgWithSubscriptionAndProfiles?.profiles.length ?? 0;
+      const pendingInviteCount = orgWithSubscriptionAndProfiles?.organizationInvites?.length ?? 0;
+      if (plan === "STARTER" && memberCount + pendingInviteCount >= 3) {
+        throw new PlanLimitReachedError();
+      }
+
       const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
       const invite = await this.prisma.organizationInvite.upsert({
         where: {
           org_invite_org_email_unique: {
             organizationId,
-            email: guestEmail.toLowerCase().trim(),
+            email: normalizedGuestEmail,
           },
         },
         create: {
           organizationId,
-          email: guestEmail.toLowerCase().trim(),
+          email: normalizedGuestEmail,
           role: targetRole,
           expiresAt,
         },
@@ -88,7 +110,8 @@ export class CreateInviteUseCase {
       if (
         err instanceof InviteError ||
         err instanceof InviteForbiddenError ||
-        err instanceof InviteValidationError
+        err instanceof InviteValidationError ||
+        err instanceof PlanLimitReachedError
       ) {
         throw err;
       }

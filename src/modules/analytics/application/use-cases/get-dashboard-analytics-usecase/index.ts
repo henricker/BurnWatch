@@ -96,15 +96,39 @@ const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
   OTHER: "Other",
 };
 
+const PLAN_MAX_DAYS: Record<string, number> = {
+  STARTER: 90,
+  PRO: 365,
+};
+
 /**
  * Returns dashboard analytics for an organization (totals, trend, evolution, breakdown, categories).
+ * Usage guard: STARTER = max 90 days history, PRO = 365 days. If range exceeds plan limit, start is clamped and isLimited is set.
  */
 export class GetDashboardAnalyticsUseCase {
   constructor(private readonly prisma: PrismaClient) {}
 
   async execute(input: DashboardAnalyticsInput): Promise<DashboardAnalyticsResult> {
     const now = new Date();
-    const { start, end, previousStart, previousEnd } = resolveDateRange(input.dateRange, now);
+    const plan = input.plan ?? "STARTER";
+    const maxDays = PLAN_MAX_DAYS[plan] ?? 90;
+    const resolved = resolveDateRange(input.dateRange, now);
+    let start = resolved.start;
+    const end = resolved.end;
+    let previousStart = resolved.previousStart;
+    let previousEnd = resolved.previousEnd;
+    let isLimited = false;
+
+    const todayStart = startOfDayUTC(now);
+    const minStart = addDays(todayStart, -maxDays);
+    if (start < minStart) {
+      start = minStart;
+      isLimited = true;
+      const numDays = Math.round((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+      previousEnd = addDays(start, -1);
+      previousStart = addDays(previousEnd, -numDays + 1);
+    }
+
     const where = buildWhere(input.organizationId, start, end, input.providerFilter);
     const previousWhere = buildWhere(
       input.organizationId,
@@ -312,6 +336,7 @@ export class GetDashboardAnalyticsUseCase {
       evolution,
       providerBreakdown,
       categories,
+      ...(isLimited && { isLimited: true }),
     };
   }
 }
